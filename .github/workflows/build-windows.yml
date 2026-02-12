@@ -1,0 +1,54 @@
+name: Build Windows
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.24.0'
+        channel: 'stable'
+    
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.23'
+    
+    - name: Setup Rust
+      uses: dtolnay/rust-toolchain@stable
+    
+    - name: Install dependencies
+      run: |
+        flutter pub get
+        choco install innosetup -y
+    
+    - name: Build Windows (${{ matrix.arch }})
+      run: |
+        dart setup.dart windows --arch ${{ matrix.arch }} --env stable
+    
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: FlClash-Windows-${{ matrix.arch }}
+        path: |
+          dist/**/*.exe
+          dist/**/*.zip
+        retention-days: 7
