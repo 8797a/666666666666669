@@ -27,7 +27,6 @@ class Application extends ConsumerStatefulWidget {
 class ApplicationState extends ConsumerState<Application> {
   Timer? _autoUpdateProfilesTaskTimer;
   bool _preHasVpn = false;
-  bool? _isLoggedIn;
 
   final _pageTransitionsTheme = const PageTransitionsTheme(
     builders: <TargetPlatform, PageTransitionsBuilder>{
@@ -48,7 +47,6 @@ class ApplicationState extends ConsumerState<Application> {
   @override
   void initState() {
     super.initState();
-    _checkLoginState();
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) async {
       final currentContext = globalState.navigatorKey.currentContext;
       if (currentContext != null) {
@@ -61,23 +59,6 @@ class ApplicationState extends ConsumerState<Application> {
       app?.initShortcuts();
     });
   }
-
-  Future<void> _checkLoginState() async {
-    if (system.isWindows) {
-      final isLoggedIn = await preferences.getLoginState();
-      if (mounted) {
-        setState(() => _isLoggedIn = isLoggedIn);
-      }
-    } else {
-      setState(() => _isLoggedIn = true);
-    }
-  }
-
-  void _onLoginSuccess() {
-    setState(() => _isLoggedIn = true);
-  }
-
-  bool get _needLogin => system.isWindows && _isLoggedIn != true;
 
   void _autoUpdateProfilesTask() {
     _autoUpdateProfilesTaskTimer = Timer(const Duration(minutes: 20), () async {
@@ -179,9 +160,7 @@ class ApplicationState extends ConsumerState<Application> {
       },
       child: _isLoggedIn == null
           ? const SizedBox.shrink()
-          : _needLogin
-              ? LoginPage(onLoginSuccess: _onLoginSuccess)
-              : const HomePage(),
+          : const HomePage(),
     );
   }
 
