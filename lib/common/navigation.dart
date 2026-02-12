@@ -35,22 +35,6 @@ class Navigation {
             const ProfilesView(key: GlobalObjectKey(PageLabel.profiles)),
       ),
       NavigationItem(
-        icon: Icon(Icons.person),
-        label: PageLabel.requests,
-        builder: (_) =>
-            const ProfileCenterView(key: GlobalObjectKey(PageLabel.requests)),
-        description: 'requestsDesc',
-        modes: [NavigationItemMode.desktop, NavigationItemMode.more],
-      ),
-      NavigationItem(
-        icon: Icon(Icons.ballot),
-        label: PageLabel.connections,
-        builder: (_) =>
-            const ConnectionsView(key: GlobalObjectKey(PageLabel.connections)),
-        description: 'connectionsDesc',
-        modes: [NavigationItemMode.desktop, NavigationItemMode.more],
-      ),
-      NavigationItem(
         icon: Icon(Icons.storage),
         label: PageLabel.resources,
         description: 'resourcesDesc',

@@ -41,10 +41,47 @@ class Request {
     } catch (e) {
       commonPrint.log('getFileResponseForUrl error ${e.toString()}');
       if (e is DioException) {
-        if (e.type == DioExceptionType.unknown) {
+        // 连接错误
+        if (e.type == DioExceptionType.connectionError) {
+          throw '连接错误：无法连接到服务器';
+        }
+        // 连接超时
+        else if (e.type == DioExceptionType.connectionTimeout) {
+          throw '连接超时：服务器响应时间过长';
+        }
+        // 接收超时
+        else if (e.type == DioExceptionType.receiveTimeout) {
+          throw '接收超时：数据接收时间过长';
+        }
+        // 发送超时
+        else if (e.type == DioExceptionType.sendTimeout) {
+          throw '发送超时：数据发送时间过长';
+        }
+        // 未知错误（通常是网络问题）
+        else if (e.type == DioExceptionType.unknown) {
+          final errorMsg = e.error?.toString() ?? '';
+          // DNS解析失败
+          if (errorMsg.contains('Failed host lookup') || 
+              errorMsg.contains('SocketException')) {
+            throw '网络错误：无法解析域名或连接失败，请检查网络连接';
+          }
           throw appLocalizations.unknownNetworkError;
-        } else if (e.type == DioExceptionType.badResponse) {
+        }
+        // 错误响应
+        else if (e.type == DioExceptionType.badResponse) {
+          final statusCode = e.response?.statusCode;
+          if (statusCode != null) {
+            throw '服务器错误：HTTP $statusCode';
+          }
           throw appLocalizations.networkException;
+        }
+        // 请求取消
+        else if (e.type == DioExceptionType.cancel) {
+          throw '请求已取消';
+        }
+        // 证书错误
+        else if (e.type == DioExceptionType.badCertificate) {
+          throw '证书错误：服务器证书无效';
         }
         rethrow;
       }

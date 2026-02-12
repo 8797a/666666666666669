@@ -45,6 +45,9 @@ jobs:
     - name: Install project dependencies
       run: flutter pub get
     
+    - name: Generate localization files
+      run: flutter pub run intl_utils:generate
+    
     - name: Build Windows (${{ matrix.arch }})
       run: dart setup.dart windows --arch ${{ matrix.arch }} --env stable
     
