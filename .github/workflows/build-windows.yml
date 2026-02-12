@@ -24,8 +24,12 @@ jobs:
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.27.1'
-        channel: 'stable'
+        channel: 'beta'
+    
+    - name: Check Flutter and Dart version
+      run: |
+        flutter --version
+        dart --version
     
     - name: Setup Go
       uses: actions/setup-go@v5
