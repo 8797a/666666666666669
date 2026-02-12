@@ -1,0 +1,69 @@
+name: Build Android
+
+on:
+  push:
+    branches: [ main, master ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+    
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        channel: 'beta'
+    
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.23'
+    
+    - name: Setup Android NDK
+      uses: nttld/setup-ndk@v1
+      with:
+        ndk-version: r26d
+    
+    - name: Install dependencies
+      run: flutter pub get
+    
+    - name: Install intl_utils
+      run: dart pub global activate intl_utils
+    
+    - name: Generate localization
+      run: dart pub global run intl_utils:generate
+    
+    - name: Build Android arm64-v8a
+      run: dart setup.dart android --arch arm64-v8a --env stable
+    
+    - name: List build output
+      run: |
+        echo "=== Listing current directory ==="
+        ls -la
+        echo "=== Listing dist directory ==="
+        ls -la dist/ || echo "dist directory not found"
+        echo "=== Finding all APK files ==="
+        find . -name "*.apk" || echo "No APK files found"
+    
+    - name: Upload Android artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: FlClash-Android-arm64-v8a
+        path: dist/**/*
+        retention-days: 30
