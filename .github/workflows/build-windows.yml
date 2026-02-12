@@ -13,7 +13,7 @@ jobs:
     
     strategy:
       matrix:
-        arch: [amd64, arm64]
+        arch: [amd64]  # 只编译 amd64，如果需要 arm64 改成 [arm64]
     
     steps:
     - name: Checkout code
