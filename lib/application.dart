@@ -158,9 +158,7 @@ class ApplicationState extends ConsumerState<Application> {
           home: child!,
         );
       },
-      child: _isLoggedIn == null
-          ? const SizedBox.shrink()
-          : const HomePage(),
+      child: const HomePage(),
     );
   }
 
