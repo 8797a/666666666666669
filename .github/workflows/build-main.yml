@@ -57,10 +57,6 @@ jobs:
   build-linux:
     runs-on: ubuntu-latest
     
-    strategy:
-      matrix:
-        arch: [amd64, arm64]
-    
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -94,22 +90,18 @@ jobs:
     - name: Generate localization
       run: dart pub global run intl_utils:generate
     
-    - name: Build Linux ${{ matrix.arch }}
-      run: dart setup.dart linux --arch ${{ matrix.arch }} --env stable
+    - name: Build Linux amd64
+      run: dart setup.dart linux --arch amd64 --env stable
     
     - name: Upload Linux artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: FlClash-Linux-${{ matrix.arch }}
+        name: FlClash-Linux-amd64
         path: dist/**/*
         retention-days: 30
 
   build-android:
     runs-on: ubuntu-latest
-    
-    strategy:
-      matrix:
-        arch: [arm64-v8a, armeabi-v7a]
     
     steps:
     - name: Checkout code
@@ -147,13 +139,13 @@ jobs:
     - name: Generate localization
       run: dart pub global run intl_utils:generate
     
-    - name: Build Android ${{ matrix.arch }}
-      run: dart setup.dart android --arch ${{ matrix.arch }} --env stable
+    - name: Build Android arm64-v8a
+      run: dart setup.dart android --arch arm64-v8a --env stable
     
     - name: Upload Android artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: FlClash-Android-${{ matrix.arch }}
+        name: FlClash-Android-arm64-v8a
         path: dist/**/*
         retention-days: 30
 
@@ -182,8 +174,8 @@ jobs:
           ## 📦 支持平台
           
           - ✅ **Windows** (amd64) - 未签名，安装时会有警告，选择"仍要运行"即可
-          - ✅ **Linux** (amd64, arm64) - 无需签名，直接安装使用
-          - ✅ **Android** (arm64-v8a, armeabi-v7a) - 调试版 APK，需允许"未知来源"
+          - ✅ **Linux** (amd64) - 无需签名，直接安装使用
+          - ✅ **Android** (arm64-v8a) - 调试版 APK，需允许"未知来源"
           
           ## 📝 安装说明
           
@@ -196,7 +188,7 @@ jobs:
           4. 按照向导完成安装
           
           ### Linux
-          1. 下载对应架构的安装包：
+          1. 下载 amd64 架构的安装包：
              - `.deb` - Debian/Ubuntu 系统
              - `.rpm` - RedHat/Fedora 系统
              - `.AppImage` - 通用格式
@@ -214,9 +206,7 @@ jobs:
              ```
           
           ### Android
-          1. 下载对应架构的 APK：
-             - `arm64-v8a` - 现代手机（推荐）
-             - `armeabi-v7a` - 旧手机
+          1. 下载 arm64-v8a 架构的 APK（适用于现代手机）
           2. 传输到手机并安装
           3. 如果提示"禁止安装未知应用"：
              - 点击"设置"
