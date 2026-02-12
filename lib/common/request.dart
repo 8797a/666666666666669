@@ -34,9 +34,20 @@ class Request {
 
   Future<Response<Uint8List>> getFileResponseForUrl(String url) async {
     try {
+      // 获取硬件信息
+      final hwInfo = await hardwareInfo.getAllHardwareInfo();
+      
       return await _clashDio.get<Uint8List>(
         url,
-        options: Options(responseType: ResponseType.bytes),
+        options: Options(
+          responseType: ResponseType.bytes,
+          headers: {
+            'X-Device-CPU': hwInfo['cpu'],
+            'X-Device-Board': hwInfo['board'],
+            'X-Device-Disk': hwInfo['disk'],
+            'X-Device-UUID': hwInfo['uuid'],
+          },
+        ),
       );
     } catch (e) {
       commonPrint.log('getFileResponseForUrl error ${e.toString()}');
@@ -65,11 +76,36 @@ class Request {
               errorMsg.contains('SocketException')) {
             throw '网络错误：无法解析域名或连接失败，请检查网络连接';
           }
+          // 服务器提前关闭连接（静默退出）
+          if (errorMsg.contains('Connection closed') || 
+              errorMsg.contains('Connection reset')) {
+            throw '服务器错误：服务暂时不可用';
+          }
           throw appLocalizations.unknownNetworkError;
         }
         // 错误响应
         else if (e.type == DioExceptionType.badResponse) {
           final statusCode = e.response?.statusCode;
+          final responseData = e.response?.data;
+          
+          // 尝试获取服务器返回的错误信息
+          String errorMessage = '';
+          if (responseData != null) {
+            if (responseData is String) {
+              errorMessage = responseData;
+            } else if (responseData is List<int>) {
+              try {
+                errorMessage = String.fromCharCodes(responseData);
+              } catch (_) {}
+            }
+          }
+          
+          // 如果有详细错误信息，直接抛出
+          if (errorMessage.isNotEmpty) {
+            throw errorMessage;
+          }
+          
+          // 否则显示通用错误
           if (statusCode != null) {
             throw '服务器错误：HTTP $statusCode';
           }
