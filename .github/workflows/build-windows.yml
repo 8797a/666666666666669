@@ -52,9 +52,10 @@ jobs:
         echo "=== Listing current directory ==="
         dir
         echo "=== Listing dist directory ==="
-        dir dist\ || echo "dist directory not found"
+        if (Test-Path dist) { dir dist } else { echo "dist directory not found" }
         echo "=== Finding all EXE and ZIP files ==="
-        dir /s *.exe *.zip || echo "No build artifacts found"
+        Get-ChildItem -Path dist -Filter *.exe -Recurse -ErrorAction SilentlyContinue
+        Get-ChildItem -Path dist -Filter *.zip -Recurse -ErrorAction SilentlyContinue
     
     - name: Upload Windows artifacts
       uses: actions/upload-artifact@v4
