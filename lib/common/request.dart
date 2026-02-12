@@ -88,24 +88,44 @@ class Request {
           final statusCode = e.response?.statusCode;
           final responseData = e.response?.data;
           
-          // 尝试获取服务器返回的错误信息
           String errorMessage = '';
           if (responseData != null) {
             if (responseData is String) {
-              errorMessage = responseData;
+              try {
+                final jsonData = json.decode(responseData);
+                if (jsonData is Map && jsonData.containsKey('error_code')) {
+                  errorMessage = _getErrorMessage(jsonData);
+                } else {
+                  errorMessage = responseData;
+                }
+              } catch (_) {
+                errorMessage = responseData;
+              }
             } else if (responseData is List<int>) {
               try {
-                errorMessage = String.fromCharCodes(responseData);
+                final text = String.fromCharCodes(responseData);
+                try {
+                  final jsonData = json.decode(text);
+                  if (jsonData is Map && jsonData.containsKey('error_code')) {
+                    errorMessage = _getErrorMessage(jsonData);
+                  } else {
+                    errorMessage = text;
+                  }
+                } catch (_) {
+                  errorMessage = text;
+                }
               } catch (_) {}
+            } else if (responseData is Map) {
+              if (responseData.containsKey('error_code')) {
+                errorMessage = _getErrorMessage(responseData);
+              }
             }
           }
           
-          // 如果有详细错误信息，直接抛出
           if (errorMessage.isNotEmpty) {
             throw errorMessage;
           }
           
-          // 否则显示通用错误
           if (statusCode != null) {
             throw '服务器错误：HTTP $statusCode';
           }
@@ -122,6 +142,24 @@ class Request {
         rethrow;
       }
       throw appLocalizations.unknownNetworkError;
+    }
+  }
+
+  String _getErrorMessage(Map<String, dynamic> errorData) {
+    final errorCode = errorData['error_code'];
+    
+    switch (errorCode) {
+      case 'DEVICE_MISMATCH':
+        final bindTime = errorData['bind_time'] ?? '';
+        return '该平台已绑定其他设备：请前往站点设备管理页面解绑（绑定时间：$bindTime）';
+      
+      case 'IP_MISMATCH':
+        final boundIp = errorData['bound_ip'] ?? '';
+        final currentIp = errorData['current_ip'] ?? '';
+        return 'IP地址不匹配，请前往站点设备管理页面解绑，绑定IP：$boundIp，当前IP：$currentIp';
+      
+      default:
+        return '未知错误';
     }
   }
 
