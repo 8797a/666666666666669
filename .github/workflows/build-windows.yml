@@ -24,7 +24,7 @@ jobs:
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.24.0'
+        flutter-version: '3.27.1'
         channel: 'stable'
     
     - name: Setup Go
@@ -35,14 +35,14 @@ jobs:
     - name: Setup Rust
       uses: dtolnay/rust-toolchain@stable
     
-    - name: Install dependencies
-      run: |
-        flutter pub get
-        choco install innosetup -y
+    - name: Install Inno Setup
+      run: choco install innosetup -y
+    
+    - name: Install project dependencies
+      run: flutter pub get
     
     - name: Build Windows (${{ matrix.arch }})
-      run: |
-        dart setup.dart windows --arch ${{ matrix.arch }} --env stable
+      run: dart setup.dart windows --arch ${{ matrix.arch }} --env stable
     
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
