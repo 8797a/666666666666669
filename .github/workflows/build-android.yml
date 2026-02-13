@@ -55,9 +55,11 @@ jobs:
     - name: Setup Android SDK
       run: |
         echo "=== Installing Android SDK components ==="
+        echo "ANDROID_HOME: $ANDROID_HOME"
+        export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
         flutter config --android-sdk $ANDROID_HOME
-        yes | sdkmanager --licenses || true
-        sdkmanager "ndk;27.3.13750724" "cmake;3.22.1" "build-tools;34.0.0"
+        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "ndk;27.3.13750724" "cmake;3.22.1" "build-tools;34.0.0"
         echo "=== Verifying NDK installation ==="
         ls -la $ANDROID_HOME/ndk/
         if [ -d "$ANDROID_HOME/ndk/27.3.13750724" ]; then
