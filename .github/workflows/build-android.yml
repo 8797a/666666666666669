@@ -52,41 +52,22 @@ jobs:
         go-version: '1.23'
         cache-dependency-path: core/go.sum
     
-    - name: Setup Android NDK
-      uses: nttld/setup-ndk@v1
-      with:
-        ndk-version: r27c
-        add-to-path: true
-    
-    - name: Verify NDK installation
+    - name: Setup Android SDK
       run: |
-        echo "=== Checking NDK installation ==="
-        echo "ANDROID_NDK_HOME: $ANDROID_NDK_HOME"
-        echo "ANDROID_NDK: $ANDROID_NDK"
-        if [ -d "$ANDROID_NDK_HOME" ]; then
-          echo "=== NDK root directory ==="
-          ls -la "$ANDROID_NDK_HOME"
-          echo "=== NDK toolchains directory ==="
-          if [ -d "$ANDROID_NDK_HOME/toolchains" ]; then
-            ls -la "$ANDROID_NDK_HOME/toolchains"
-            if [ -d "$ANDROID_NDK_HOME/toolchains/llvm" ]; then
-              ls -la "$ANDROID_NDK_HOME/toolchains/llvm"
-              if [ -d "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt" ]; then
-                ls -la "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt"
-              else
-                echo "prebuilt directory not found"
-              fi
-            else
-              echo "llvm directory not found"
-            fi
-          else
-            echo "toolchains directory not found"
-          fi
+        echo "=== Installing Android SDK components ==="
+        flutter config --android-sdk $ANDROID_HOME
+        yes | sdkmanager --licenses || true
+        sdkmanager "ndk;27.3.13750724" "cmake;3.22.1" "build-tools;34.0.0"
+        echo "=== Verifying NDK installation ==="
+        ls -la $ANDROID_HOME/ndk/
+        if [ -d "$ANDROID_HOME/ndk/27.3.13750724" ]; then
+          echo "NDK installed successfully"
+          echo "ANDROID_NDK=$ANDROID_HOME/ndk/27.3.13750724" >> $GITHUB_ENV
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.3.13750724" >> $GITHUB_ENV
         else
-          echo "ANDROID_NDK_HOME not found"
+          echo "NDK installation failed"
+          exit 1
         fi
-        echo "=== Setting ANDROID_NDK environment variable ==="
-        echo "ANDROID_NDK=$ANDROID_NDK_HOME" >> $GITHUB_ENV
     
     - name: Install dependencies
       run: flutter pub get
@@ -110,16 +91,18 @@ jobs:
         flutter doctor -v
         echo "=== Java version ==="
         java -version
+        echo "=== Android SDK location ==="
+        echo "ANDROID_HOME: $ANDROID_HOME"
         echo "=== NDK environment variables ==="
         echo "ANDROID_NDK_HOME: $ANDROID_NDK_HOME"
         echo "ANDROID_NDK: $ANDROID_NDK"
         echo "=== NDK directory structure ==="
-        if [ -d "$ANDROID_NDK_HOME" ]; then
-          ls -la "$ANDROID_NDK_HOME"
-          echo "=== NDK toolchains ==="
-          ls -la "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/" || echo "Prebuilt directory not found"
-        else
-          echo "ANDROID_NDK_HOME directory not found"
+        if [ -d "$ANDROID_NDK" ]; then
+          ls -la "$ANDROID_NDK"
+          if [ -d "$ANDROID_NDK/toolchains/llvm/prebuilt" ]; then
+            echo "=== Prebuilt toolchains ==="
+            ls -la "$ANDROID_NDK/toolchains/llvm/prebuilt"
+          fi
         fi
     
     - name: Build Android arm64-v8a
