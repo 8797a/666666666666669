@@ -64,16 +64,23 @@ jobs:
         echo "=== Checking NDK installation ==="
         echo "ANDROID_NDK_HOME: $ANDROID_NDK_HOME"
         echo "ANDROID_HOME: $ANDROID_HOME"
-        echo "=== Finding NDK directories ==="
-        find /usr/local/lib/android -name "ndk" -type d 2>/dev/null || true
-        find $HOME -name "*ndk*" -type d 2>/dev/null | head -20 || true
-        echo "=== Setting ANDROID_NDK environment variable ==="
-        if [ -n "$ANDROID_NDK_HOME" ] && [ -d "$ANDROID_NDK_HOME" ]; then
-          echo "ANDROID_NDK=$ANDROID_NDK_HOME" >> $GITHUB_ENV
-          echo "NDK found at: $ANDROID_NDK_HOME"
-          ls -la "$ANDROID_NDK_HOME"
+        echo "=== Finding actual NDK location ==="
+        NDK_PATH=$(find /home/runner/work/_temp -name "android-ndk-r*" -type d 2>/dev/null | head -1)
+        if [ -z "$NDK_PATH" ]; then
+          NDK_PATH=$(find $HOME/.setup-ndk -name "r27c" -type d 2>/dev/null | head -1)
+        fi
+        echo "Found NDK at: $NDK_PATH"
+        if [ -n "$NDK_PATH" ] && [ -d "$NDK_PATH" ]; then
+          echo "ANDROID_NDK=$NDK_PATH" >> $GITHUB_ENV
+          echo "ANDROID_NDK_HOME=$NDK_PATH" >> $GITHUB_ENV
+          echo "=== NDK directory contents ==="
+          ls -la "$NDK_PATH"
+          echo "=== Checking toolchains ==="
+          if [ -d "$NDK_PATH/toolchains/llvm/prebuilt" ]; then
+            ls -la "$NDK_PATH/toolchains/llvm/prebuilt"
+          fi
         else
-          echo "ERROR: ANDROID_NDK_HOME not set or directory not found"
+          echo "ERROR: NDK not found"
           exit 1
         fi
     
