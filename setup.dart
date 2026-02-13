@@ -156,7 +156,12 @@ class Build {
       print(utf8.decode(data));
     });
     final exitCode = await process.exitCode;
-    if (exitCode != 0 && name != null) throw '$name error';
+    if (exitCode != 0) {
+      final errorMsg = name != null 
+          ? '$name error: Command failed with exit code $exitCode\nCommand: ${executable.join(' ')}'
+          : 'Command failed with exit code $exitCode: ${executable.join(' ')}';
+      throw errorMsg;
+    }
   }
 
   static Future<String> calcSha256(String filePath) async {
@@ -374,8 +379,10 @@ class BuildCommand extends Command {
       'APP_ENV': env,
       if (coreSha256 != null) 'CORE_SHA256': coreSha256,
     };
-    final envFile = File(join(current, 'env.json'))..create();
-    await envFile.writeAsString(json.encode(data));
+    final envFile = File(join(current, 'env.json'))..createSync();
+    final envContent = json.encode(data);
+    await envFile.writeAsString(envContent);
+    print('Created env.json with content: $envContent');
   }
 
   Future<void> _getLinuxDependencies(Arch arch) async {
@@ -418,11 +425,15 @@ class BuildCommand extends Command {
     required String env,
   }) async {
     await Build.getDistributor();
+    final command = 'flutter_distributor package --skip-clean --platform ${target.name} --targets $targets --flutter-build-args=verbose,dart-define-from-file=env.json$args';
+    print('=== Building distributor ===');
+    print('Platform: ${target.name}');
+    print('Targets: $targets');
+    print('Full command: $command');
+    print('========================');
     await Build.exec(
       name: name,
-      Build.getExecutable(
-        'flutter_distributor package --skip-clean --platform ${target.name} --targets $targets --flutter-build-args=verbose,dart-define-from-file=env.json$args',
-      ),
+      Build.getExecutable(command),
     );
   }
 
@@ -442,13 +453,22 @@ class BuildCommand extends Command {
     final String out = argResults?['out'] ?? (target.same ? 'app' : 'core');
     final archName = argResults?['arch'];
     final env = argResults?['env'] ?? 'pre';
-    final currentArches = arches
-        .where((element) => element.name == archName)
-        .toList();
-    final arch = currentArches.isEmpty ? null : currentArches.first;
+    
+    // For Android, match by archName (e.g., 'arm64-v8a'); for others, match by arch.name
+    Arch? arch;
+    if (target == Target.android && archName != null) {
+      final matchedItems = Build.buildItems.where((item) =>
+          item.target == target && item.archName == archName).toList();
+      arch = matchedItems.isEmpty ? null : matchedItems.first.arch;
+    } else {
+      final currentArches = arches
+          .where((element) => element.name == archName)
+          .toList();
+      arch = currentArches.isEmpty ? null : currentArches.first;
+    }
 
     if (arch == null && target != Target.android) {
-      throw 'Invalid arch parameter';
+      throw 'Invalid arch parameter: $archName';
     }
 
     final corePaths = await Build.buildCore(
@@ -479,11 +499,7 @@ class BuildCommand extends Command {
         return;
       case Target.linux:
         final targetMap = {Arch.arm64: 'linux-arm64', Arch.amd64: 'linux-x64'};
-        final targets = [
-          'deb',
-          if (arch == Arch.amd64) 'appimage',
-          if (arch == Arch.amd64) 'rpm',
-        ].join(',');
+        final targets = 'deb';
         final defaultTarget = targetMap[arch];
         await _getLinuxDependencies(arch!);
         await _buildDistributor(
