@@ -113,6 +113,8 @@ jobs:
       run: dart setup.dart android --arch arm64-v8a --env stable
       env:
         GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4096m -Dorg.gradle.daemon=false"
+        ANDROID_HOME: /usr/local/lib/android/sdk
+        ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
     
     - name: Clean build cache
       run: |
