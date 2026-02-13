@@ -58,6 +58,36 @@ jobs:
         ndk-version: r27c
         add-to-path: true
     
+    - name: Verify NDK installation
+      run: |
+        echo "=== Checking NDK installation ==="
+        echo "ANDROID_NDK_HOME: $ANDROID_NDK_HOME"
+        echo "ANDROID_NDK: $ANDROID_NDK"
+        if [ -d "$ANDROID_NDK_HOME" ]; then
+          echo "=== NDK root directory ==="
+          ls -la "$ANDROID_NDK_HOME"
+          echo "=== NDK toolchains directory ==="
+          if [ -d "$ANDROID_NDK_HOME/toolchains" ]; then
+            ls -la "$ANDROID_NDK_HOME/toolchains"
+            if [ -d "$ANDROID_NDK_HOME/toolchains/llvm" ]; then
+              ls -la "$ANDROID_NDK_HOME/toolchains/llvm"
+              if [ -d "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt" ]; then
+                ls -la "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt"
+              else
+                echo "prebuilt directory not found"
+              fi
+            else
+              echo "llvm directory not found"
+            fi
+          else
+            echo "toolchains directory not found"
+          fi
+        else
+          echo "ANDROID_NDK_HOME not found"
+        fi
+        echo "=== Setting ANDROID_NDK environment variable ==="
+        echo "ANDROID_NDK=$ANDROID_NDK_HOME" >> $GITHUB_ENV
+    
     - name: Install dependencies
       run: flutter pub get
     

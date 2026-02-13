@@ -114,12 +114,28 @@ class Build {
       if (ndk == null) {
         throw 'ANDROID_NDK or ANDROID_NDK_HOME environment variable not set';
       }
+      print('Using NDK at: $ndk');
+      
       final prebuiltDir = Directory(
         join(ndk, 'toolchains', 'llvm', 'prebuilt'),
       );
+      print('Looking for prebuilt directory at: ${prebuiltDir.path}');
+      
       if (!prebuiltDir.existsSync()) {
+        print('Prebuilt directory not found, checking alternative paths...');
+        final ndkDir = Directory(ndk);
+        print('NDK directory contents:');
+        ndkDir.listSync().forEach((item) => print('  ${basename(item.path)}'));
+        
+        final toolchainsDir = Directory(join(ndk, 'toolchains'));
+        if (toolchainsDir.existsSync()) {
+          print('Toolchains directory contents:');
+          toolchainsDir.listSync().forEach((item) => print('  ${basename(item.path)}'));
+        }
+        
         throw 'NDK prebuilt directory not found at ${prebuiltDir.path}';
       }
+      
       final prebuiltDirList = prebuiltDir
           .listSync()
           .where((file) => !basename(file.path).startsWith('.'))
@@ -127,6 +143,9 @@ class Build {
       if (prebuiltDirList.isEmpty) {
         throw 'No prebuilt toolchain found in ${prebuiltDir.path}';
       }
+      
+      print('Found prebuilt toolchain at: ${prebuiltDirList.first.path}');
+      
       final map = {
         'armeabi-v7a': 'armv7a-linux-androideabi21-clang',
         'arm64-v8a': 'aarch64-linux-android21-clang',
