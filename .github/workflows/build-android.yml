@@ -59,6 +59,15 @@ jobs:
     - name: Generate localization
       run: dart pub global run intl_utils:generate
     
+    - name: Verify build environment
+      run: |
+        echo "=== Flutter doctor ==="
+        flutter doctor -v
+        echo "=== Java version ==="
+        java -version
+        echo "=== NDK location ==="
+        echo $ANDROID_NDK_HOME
+    
     - name: Build Android arm64-v8a
       run: dart setup.dart android --arch arm64-v8a --env stable
     

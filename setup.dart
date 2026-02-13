@@ -149,17 +149,24 @@ class Build {
       workingDirectory: workingDirectory,
       runInShell: runInShell,
     );
+    final stdoutBuffer = StringBuffer();
+    final stderrBuffer = StringBuffer();
+    
     process.stdout.listen((data) {
-      print(utf8.decode(data));
+      final text = utf8.decode(data);
+      print(text);
+      stdoutBuffer.write(text);
     });
     process.stderr.listen((data) {
-      print(utf8.decode(data));
+      final text = utf8.decode(data);
+      print(text);
+      stderrBuffer.write(text);
     });
     final exitCode = await process.exitCode;
     if (exitCode != 0) {
       final errorMsg = name != null 
-          ? '$name error: Command failed with exit code $exitCode\nCommand: ${executable.join(' ')}'
-          : 'Command failed with exit code $exitCode: ${executable.join(' ')}';
+          ? '$name error: Command failed with exit code $exitCode\nCommand: ${executable.join(' ')}\nStderr: ${stderrBuffer.toString()}'
+          : 'Command failed with exit code $exitCode: ${executable.join(' ')}\nStderr: ${stderrBuffer.toString()}';
       throw errorMsg;
     }
   }
@@ -425,6 +432,14 @@ class BuildCommand extends Command {
     required String env,
   }) async {
     await Build.getDistributor();
+    
+    // Verify env.json exists
+    final envFile = File(join(current, 'env.json'));
+    if (!await envFile.exists()) {
+      throw 'env.json not found at ${envFile.path}';
+    }
+    print('env.json verified at: ${envFile.path}');
+    
     final command = 'flutter_distributor package --skip-clean --platform ${target.name} --targets $targets --flutter-build-args=verbose,dart-define-from-file=env.json$args';
     print('=== Building distributor ===');
     print('Platform: ${target.name}');
@@ -459,17 +474,31 @@ class BuildCommand extends Command {
     if (target == Target.android && archName != null) {
       final matchedItems = Build.buildItems.where((item) =>
           item.target == target && item.archName == archName).toList();
-      arch = matchedItems.isEmpty ? null : matchedItems.first.arch;
-    } else {
+      if (matchedItems.isEmpty) {
+        throw 'Invalid Android arch parameter: $archName. Valid options: armeabi-v7a, arm64-v8a, x86_64';
+      }
+      arch = matchedItems.first.arch;
+    } else if (archName != null) {
       final currentArches = arches
           .where((element) => element.name == archName)
           .toList();
-      arch = currentArches.isEmpty ? null : currentArches.first;
+      if (currentArches.isEmpty) {
+        throw 'Invalid arch parameter: $archName. Valid options: ${arches.map((e) => e.name).join(", ")}';
+      }
+      arch = currentArches.first;
+    } else {
+      if (target != Target.android) {
+        throw 'Arch parameter is required for ${target.name}';
+      }
     }
 
-    if (arch == null && target != Target.android) {
-      throw 'Invalid arch parameter: $archName';
-    }
+    print('=== Build Configuration ===');
+    print('Target: ${target.name}');
+    print('Arch: ${arch?.name ?? "null"}');
+    print('ArchName: $archName');
+    print('Mode: ${mode.name}');
+    print('Env: $env');
+    print('========================');
 
     final corePaths = await Build.buildCore(
       target: target,
