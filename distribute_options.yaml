@@ -2,6 +2,10 @@ app_name: 'FlClash'
 output: 'dist/'
 
 targets:
+  windows-exe:
+    target: exe
+    platform: windows
+  
   android-apk:
     target: apk
     platform: android
