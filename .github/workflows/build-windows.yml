@@ -45,11 +45,22 @@ jobs:
     - name: Generate localization
       run: dart pub global run intl_utils:generate
     
+    - name: Check Flutter doctor
+      run: flutter doctor -v
+    
     - name: Build Windows amd64
       run: |
+        echo "=== Starting Windows build ==="
         dart setup.dart windows --arch amd64 --env stable
-        if (-not (Test-Path dist)) {
-          Write-Error "Build failed: dist directory not found"
+        echo "=== Build command completed ==="
+        echo "=== Checking if dist directory exists ==="
+        if (Test-Path dist) {
+          echo "dist directory found"
+          Get-ChildItem -Path dist -Recurse
+        } else {
+          echo "ERROR: dist directory not found"
+          echo "=== Listing current directory ==="
+          Get-ChildItem -Recurse -Depth 2
           exit 1
         }
       env:
