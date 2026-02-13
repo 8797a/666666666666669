@@ -52,22 +52,28 @@ jobs:
         go-version: '1.23'
         cache-dependency-path: core/go.sum
     
-    - name: Setup Android SDK
+    - name: Setup Android NDK
+      uses: nttld/setup-ndk@v1
+      with:
+        ndk-version: r27c
+        add-to-path: true
+        local-cache: true
+    
+    - name: Verify NDK installation
       run: |
-        echo "=== Installing Android SDK components ==="
+        echo "=== Checking NDK installation ==="
+        echo "ANDROID_NDK_HOME: $ANDROID_NDK_HOME"
         echo "ANDROID_HOME: $ANDROID_HOME"
-        export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
-        flutter config --android-sdk $ANDROID_HOME
-        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
-        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "ndk;27.3.13750724" "cmake;3.22.1" "build-tools;34.0.0"
-        echo "=== Verifying NDK installation ==="
-        ls -la $ANDROID_HOME/ndk/
-        if [ -d "$ANDROID_HOME/ndk/27.3.13750724" ]; then
-          echo "NDK installed successfully"
-          echo "ANDROID_NDK=$ANDROID_HOME/ndk/27.3.13750724" >> $GITHUB_ENV
-          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.3.13750724" >> $GITHUB_ENV
+        echo "=== Finding NDK directories ==="
+        find /usr/local/lib/android -name "ndk" -type d 2>/dev/null || true
+        find $HOME -name "*ndk*" -type d 2>/dev/null | head -20 || true
+        echo "=== Setting ANDROID_NDK environment variable ==="
+        if [ -n "$ANDROID_NDK_HOME" ] && [ -d "$ANDROID_NDK_HOME" ]; then
+          echo "ANDROID_NDK=$ANDROID_NDK_HOME" >> $GITHUB_ENV
+          echo "NDK found at: $ANDROID_NDK_HOME"
+          ls -la "$ANDROID_NDK_HOME"
         else
-          echo "NDK installation failed"
+          echo "ERROR: ANDROID_NDK_HOME not set or directory not found"
           exit 1
         fi
     
