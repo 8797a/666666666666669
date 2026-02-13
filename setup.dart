@@ -525,7 +525,7 @@ class BuildCommand extends Command {
           target: target,
           targets: 'apk',
           args:
-              ",split-per-abi --build-target-platform ${defaultTargets.join(",")}",
+              ',split-per-abi --build-target-platform ${defaultTargets.join(",")}',
           env: env,
         );
         return;
