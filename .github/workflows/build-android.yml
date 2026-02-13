@@ -108,6 +108,9 @@ jobs:
             ls -la "$ANDROID_NDK/toolchains/llvm/prebuilt"
           fi
         fi
+        echo "=== Configuring Flutter Android SDK ==="
+        flutter config --android-sdk /usr/local/lib/android/sdk
+        flutter doctor -v
     
     - name: Build Android arm64-v8a
       run: dart setup.dart android --arch arm64-v8a --env stable
