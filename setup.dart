@@ -473,9 +473,22 @@ class BuildCommand extends Command {
     print('Targets: $targets');
     print('Full command: $command');
     print('========================');
+    
+    // Pass environment variables for Android builds
+    final environment = <String, String>{};
+    if (target == Target.android) {
+      final androidHome = Platform.environment['ANDROID_HOME'] ?? 
+                         Platform.environment['ANDROID_SDK_ROOT'] ?? 
+                         '/usr/local/lib/android/sdk';
+      environment['ANDROID_HOME'] = androidHome;
+      environment['ANDROID_SDK_ROOT'] = androidHome;
+      print('Setting ANDROID_HOME: $androidHome');
+    }
+    
     await Build.exec(
       name: name,
       Build.getExecutable(command),
+      environment: environment.isNotEmpty ? environment : null,
     );
   }
 
