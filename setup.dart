@@ -110,15 +110,23 @@ class Build {
   static String _getCc(BuildItem buildItem) {
     final environment = Platform.environment;
     if (buildItem.target == Target.android) {
-      final ndk = environment['ANDROID_NDK'];
-      assert(ndk != null);
+      final ndk = environment['ANDROID_NDK'] ?? environment['ANDROID_NDK_HOME'];
+      if (ndk == null) {
+        throw 'ANDROID_NDK or ANDROID_NDK_HOME environment variable not set';
+      }
       final prebuiltDir = Directory(
-        join(ndk!, 'toolchains', 'llvm', 'prebuilt'),
+        join(ndk, 'toolchains', 'llvm', 'prebuilt'),
       );
+      if (!prebuiltDir.existsSync()) {
+        throw 'NDK prebuilt directory not found at ${prebuiltDir.path}';
+      }
       final prebuiltDirList = prebuiltDir
           .listSync()
           .where((file) => !basename(file.path).startsWith('.'))
           .toList();
+      if (prebuiltDirList.isEmpty) {
+        throw 'No prebuilt toolchain found in ${prebuiltDir.path}';
+      }
       final map = {
         'armeabi-v7a': 'armv7a-linux-androideabi21-clang',
         'arm64-v8a': 'aarch64-linux-android21-clang',

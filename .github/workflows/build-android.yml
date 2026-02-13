@@ -80,8 +80,17 @@ jobs:
         flutter doctor -v
         echo "=== Java version ==="
         java -version
-        echo "=== NDK location ==="
-        echo $ANDROID_NDK_HOME
+        echo "=== NDK environment variables ==="
+        echo "ANDROID_NDK_HOME: $ANDROID_NDK_HOME"
+        echo "ANDROID_NDK: $ANDROID_NDK"
+        echo "=== NDK directory structure ==="
+        if [ -d "$ANDROID_NDK_HOME" ]; then
+          ls -la "$ANDROID_NDK_HOME"
+          echo "=== NDK toolchains ==="
+          ls -la "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/" || echo "Prebuilt directory not found"
+        else
+          echo "ANDROID_NDK_HOME directory not found"
+        fi
     
     - name: Build Android arm64-v8a
       run: dart setup.dart android --arch arm64-v8a --env stable
