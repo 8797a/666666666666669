@@ -42,6 +42,7 @@ jobs:
       uses: actions/setup-go@v5
       with:
         go-version: '1.23'
+        cache-dependency-path: core/go.sum
     
     - name: Setup Android NDK
       uses: nttld/setup-ndk@v1

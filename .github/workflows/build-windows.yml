@@ -28,6 +28,7 @@ jobs:
       uses: actions/setup-go@v5
       with:
         go-version: '1.23'
+        cache-dependency-path: core/go.sum
     
     - name: Setup Rust
       uses: dtolnay/rust-toolchain@stable
@@ -45,7 +46,12 @@ jobs:
       run: dart pub global run intl_utils:generate
     
     - name: Build Windows amd64
-      run: dart setup.dart windows --arch amd64 --env stable
+      run: |
+        dart setup.dart windows --arch amd64 --env stable
+        if (-not (Test-Path dist)) {
+          Write-Error "Build failed: dist directory not found"
+          exit 1
+        }
     
     - name: List build output
       run: |
