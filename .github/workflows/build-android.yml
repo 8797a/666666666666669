@@ -16,10 +16,18 @@ jobs:
     steps:
     - name: Free Disk Space
       run: |
+        echo "=== Before cleanup ==="
+        df -h
+        echo "=== Cleaning up ==="
         sudo rm -rf /usr/share/dotnet
         sudo rm -rf /opt/ghc
         sudo rm -rf /opt/hostedtoolcache/CodeQL
+        sudo rm -rf /usr/local/lib/android
+        sudo rm -rf /usr/share/swift
+        sudo rm -rf /usr/local/.ghcup
         sudo docker image prune --all --force
+        sudo apt-get clean
+        echo "=== After cleanup ==="
         df -h
     
     - name: Checkout code
@@ -53,6 +61,13 @@ jobs:
     - name: Install dependencies
       run: flutter pub get
     
+    - name: Configure Gradle
+      run: |
+        mkdir -p ~/.gradle
+        echo "org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -XX:+HeapDumpOnOutOfMemoryError" >> ~/.gradle/gradle.properties
+        echo "org.gradle.daemon=false" >> ~/.gradle/gradle.properties
+        echo "org.gradle.parallel=false" >> ~/.gradle/gradle.properties
+    
     - name: Install intl_utils
       run: dart pub global activate intl_utils
     
@@ -70,6 +85,16 @@ jobs:
     
     - name: Build Android arm64-v8a
       run: dart setup.dart android --arch arm64-v8a --env stable
+      env:
+        GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4096m -Dorg.gradle.daemon=false"
+    
+    - name: Clean build cache
+      run: |
+        echo "=== Cleaning Gradle cache ==="
+        rm -rf ~/.gradle/caches
+        rm -rf ~/.gradle/wrapper
+        echo "=== Disk space after build ==="
+        df -h
     
     - name: List build output
       run: |

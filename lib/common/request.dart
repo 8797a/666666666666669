@@ -92,8 +92,8 @@ class Request {
           if (responseData != null) {
             if (responseData is String) {
               try {
-                final jsonData = json.decode(responseData);
-                if (jsonData is Map && jsonData.containsKey('error_code')) {
+                final jsonData = json.decode(responseData) as Map<String, dynamic>;
+                if (jsonData.containsKey('error_code')) {
                   errorMessage = _getErrorMessage(jsonData);
                 } else {
                   errorMessage = responseData;
@@ -105,8 +105,8 @@ class Request {
               try {
                 final text = String.fromCharCodes(responseData);
                 try {
-                  final jsonData = json.decode(text);
-                  if (jsonData is Map && jsonData.containsKey('error_code')) {
+                  final jsonData = json.decode(text) as Map<String, dynamic>;
+                  if (jsonData.containsKey('error_code')) {
                     errorMessage = _getErrorMessage(jsonData);
                   } else {
                     errorMessage = text;
@@ -116,9 +116,12 @@ class Request {
                 }
               } catch (_) {}
             } else if (responseData is Map) {
-              if (responseData.containsKey('error_code')) {
-                errorMessage = _getErrorMessage(responseData);
-              }
+              try {
+                final Map<String, dynamic> jsonData = Map<String, dynamic>.from(responseData.cast<String, dynamic>());
+                if (jsonData.containsKey('error_code')) {
+                  errorMessage = _getErrorMessage(jsonData);
+                }
+              } catch (_) {}
             }
           }
           

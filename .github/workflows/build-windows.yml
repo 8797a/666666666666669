@@ -52,6 +52,8 @@ jobs:
           Write-Error "Build failed: dist directory not found"
           exit 1
         }
+      env:
+        FLUTTER_BUILD_VERBOSE: "true"
     
     - name: List build output
       run: |
