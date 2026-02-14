@@ -783,19 +783,30 @@ extension CoreControllerExt on AppController {
 
   Future<void> _connectCore() async {
     _ref.read(coreStatusProvider.notifier).value = CoreStatus.connecting;
-    final result = await Future.wait([
-      coreController.preload(),
-      Future.delayed(Duration(milliseconds: 300)),
-    ]);
-    final String message = result[0];
-    if (message.isNotEmpty) {
+    try {
+      final result = await Future.wait([
+        coreController.preload(),
+        Future.delayed(Duration(milliseconds: 300)),
+      ]);
+      final String message = result[0];
+      if (message.isNotEmpty) {
+        _ref.read(coreStatusProvider.notifier).value = CoreStatus.disconnected;
+        if (_context.mounted) {
+          _context.showNotifier(message);
+        }
+        return;
+      }
+      _ref.read(coreStatusProvider.notifier).value = CoreStatus.connected;
+    } catch (e, s) {
+      commonPrint.log(
+        'connectCore error: $e, stack: $s',
+        logLevel: LogLevel.error,
+      );
       _ref.read(coreStatusProvider.notifier).value = CoreStatus.disconnected;
       if (_context.mounted) {
-        _context.showNotifier(message);
+        _context.showNotifier(e.toString());
       }
-      return;
     }
-    _ref.read(coreStatusProvider.notifier).value = CoreStatus.connected;
   }
 
   Future<Result<bool>> _requestAdmin(bool enableTun) async {
