@@ -779,7 +779,7 @@ extension CoreControllerExt on AppController {
       if (message.isNotEmpty) {
         _ref.read(coreStatusProvider.notifier).value = CoreStatus.disconnected;
         if (_context.mounted) {
-          _context.showNotifier(message);
+          await _showCoreStartFailureDialog(message);
         }
         return;
       }
@@ -791,9 +791,57 @@ extension CoreControllerExt on AppController {
       );
       _ref.read(coreStatusProvider.notifier).value = CoreStatus.disconnected;
       if (_context.mounted) {
-        _context.showNotifier(e.toString());
+        await _showCoreStartFailureDialog(e.toString());
       }
     }
+  }
+
+  Future<void> _showCoreStartFailureDialog(String errorMessage) async {
+    String title = '核心启动失败';
+    String detailedMessage = errorMessage;
+    
+    if (errorMessage.contains('TimeoutException') || errorMessage.contains('timeout')) {
+      title = 'Android 后台服务启动失败';
+      detailedMessage = '后台服务启动超时（5秒），可能原因：\n\n'
+          '1. 系统资源不足\n'
+          '2. 后台服务被系统限制\n'
+          '3. 核心文件损坏\n\n'
+          '建议：重启应用或清理后台应用后重试';
+    } else if (errorMessage.contains('permission') || errorMessage.contains('Permission')) {
+      title = '权限问题';
+      detailedMessage = 'VPN 权限未授予或被拒绝\n\n'
+          '请在系统设置中授予应用 VPN 权限';
+    } else if (errorMessage.contains('library') || errorMessage.contains('Library') || 
+               errorMessage.contains('核心') || errorMessage.contains('core')) {
+      title = '核心库文件加载失败';
+      detailedMessage = '核心库文件可能损坏或缺失\n\n'
+          '建议：重新安装应用';
+    } else if (errorMessage.contains('memory') || errorMessage.contains('Memory') ||
+               errorMessage.contains('resource') || errorMessage.contains('Resource')) {
+      title = '系统资源不足';
+      detailedMessage = '设备内存或系统资源不足\n\n'
+          '建议：清理后台应用后重试';
+    }
+    
+    await globalState.showMessage(
+      title: title,
+      message: TextSpan(
+        children: [
+          TextSpan(
+            text: '$detailedMessage\n\n',
+            style: TextStyle(fontSize: 14),
+          ),
+          TextSpan(
+            text: '原始错误信息：\n',
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+          ),
+          TextSpan(
+            text: errorMessage,
+            style: TextStyle(fontSize: 11, color: Colors.grey),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<Result<bool>> _requestAdmin(bool enableTun) async {
