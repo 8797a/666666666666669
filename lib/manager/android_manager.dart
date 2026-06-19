@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/controller.dart';
 import 'package:fl_clash/core/core.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
@@ -31,14 +34,37 @@ class _AndroidContainerState extends ConsumerState<AndroidManager>
     ref.listenManual(sharedStateProvider, (prev, next) {
       if (prev != next) {
         debouncer.call(FunctionTag.saveSharedFile, () async {
-          preferences.saveShareState(next);
+          preferences.saveShareState(next.needSyncSharedState);
         }, duration: Duration(seconds: 1));
         if (prev?.needSyncSharedState != next.needSyncSharedState) {
-          service?.syncState(next.needSyncSharedState);
+          service?.syncStateData(await _buildSharedStateJson(next));
         }
       }
     });
     service?.addListener(this);
+  }
+
+  Future<String> _buildSharedStateJson(SharedState state) async {
+    final stateJson = state.toJson();
+    final profile = ref.read(currentProfileProvider);
+    if (profile == null || state.setupParams == null) {
+      stateJson['setupParams'] = null;
+      return json.encode(stateJson);
+    }
+    try {
+      final setupState = await ref.read(setupStateProvider(profile.id).future);
+      final patchConfig = ref.read(patchClashConfigProvider);
+      final config = await appController.getProfile(
+        setupState: setupState,
+        patchConfig: patchConfig,
+      );
+      final yamlString = await encodeYamlTask(config);
+      stateJson['setupParams'] = state.setupParams!.toJson()
+        ..['config'] = yamlString;
+    } catch (_) {
+      stateJson['setupParams'] = null;
+    }
+    return json.encode(stateJson);
   }
 
   @override

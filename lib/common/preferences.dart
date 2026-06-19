@@ -39,6 +39,11 @@ class Preferences {
     await preferences?.setString('sharedState', json.encode(shareState));
   }
 
+  Future<void> saveShareStateJson(String shareState) async {
+    final preferences = await sharedPreferencesCompleter.future;
+    await preferences?.setString('sharedState', shareState);
+  }
+
   Future<Map<String, Object?>?> getConfigMap() async {
     try {
       final preferences = await sharedPreferencesCompleter.future;
@@ -83,6 +88,16 @@ class Preferences {
   Future<bool> saveConfig(Config config) async {
     final preferences = await sharedPreferencesCompleter.future;
     return preferences?.setString(configKey, json.encode(config)) ?? false;
+  }
+
+  Future<String?> getPlanLimitJson() async {
+    final preferences = await sharedPreferencesCompleter.future;
+    return preferences?.getString('planLimit');
+  }
+
+  Future<void> savePlanLimitJson(String data) async {
+    final preferences = await sharedPreferencesCompleter.future;
+    await preferences?.setString('planLimit', data);
   }
 
   Future<bool> getLoginState() async {

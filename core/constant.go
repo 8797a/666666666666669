@@ -19,6 +19,7 @@ type InitParams struct {
 type SetupParams struct {
 	SelectedMap map[string]string `json:"selected-map"`
 	TestURL     string            `json:"test-url"`
+	Config      string            `json:"config"`
 }
 
 type UpdateParams struct {
@@ -78,6 +79,7 @@ const (
 	forceGcMethod                  Method = "forceGc"
 	shutdownMethod                 Method = "shutdown"
 	validateConfigMethod           Method = "validateConfig"
+	validateConfigDataMethod       Method = "validateConfigData"
 	updateConfigMethod             Method = "updateConfig"
 	getProxiesMethod               Method = "getProxies"
 	changeProxyMethod              Method = "changeProxy"
@@ -104,6 +106,7 @@ const (
 	crashMethod                    Method = "crash"
 	setupConfigMethod              Method = "setupConfig"
 	getConfigMethod                Method = "getConfig"
+	getConfigDataMethod            Method = "getConfigData"
 	deleteFile                     Method = "deleteFile"
 )
 

@@ -19,13 +19,17 @@ mixin CoreInterface {
 
   Future<String> validateConfig(String path);
 
+  Future<String> validateConfigData(String data);
+
   Future<Result> getConfig(String path);
+
+  Future<Result> getConfigData(String data);
 
   Future<String> asyncTestDelay(String url, String proxyName);
 
   Future<String> updateConfig(UpdateParams updateParams);
 
-  Future<String> setupConfig(SetupParams setupParams);
+  Future<String> setupConfig(SetupParams setupParams, {String config = ''});
 
   Future<ProxiesData> getProxies();
 
@@ -116,7 +120,7 @@ abstract class CoreHandlerInterface with CoreInterface {
 
   Future<T> parasResult<T>(ActionResult result) async {
     return switch (result.method) {
-      ActionMethod.getConfig => result.toResult as T,
+      ActionMethod.getConfig || ActionMethod.getConfigData => result.toResult as T,
       _ => result.data as T,
     };
   }
@@ -153,6 +157,15 @@ abstract class CoreHandlerInterface with CoreInterface {
   }
 
   @override
+  Future<String> validateConfigData(String data) async {
+    return await _invoke<String>(
+          method: ActionMethod.validateConfigData,
+          data: data,
+        ) ??
+        '';
+  }
+
+  @override
   Future<String> updateConfig(UpdateParams updateParams) async {
     return await _invoke<String>(
           method: ActionMethod.updateConfig,
@@ -168,10 +181,18 @@ abstract class CoreHandlerInterface with CoreInterface {
   }
 
   @override
-  Future<String> setupConfig(SetupParams setupParams) async {
+  Future<Result> getConfigData(String data) async {
+    final res = await _invoke(method: ActionMethod.getConfigData, data: data);
+    return res ?? Result.success({});
+  }
+
+  @override
+  Future<String> setupConfig(SetupParams setupParams, {String config = ''}) async {
+    final data = setupParams.toJson();
+    data['config'] = config;
     return await _invoke<String>(
           method: ActionMethod.setupConfig,
-          data: json.encode(setupParams),
+          data: json.encode(data),
         ) ??
         '';
   }

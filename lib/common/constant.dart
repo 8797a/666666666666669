@@ -15,6 +15,8 @@ const coreName = 'clash.meta';
 const browserUa =
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 const packageName = 'com.follow.clash';
+const clientMarkerHeader = 'X-XMU-Client-Marker';
+const clientMarkerValue = 'xmu-flclash-client-20260619-8f3b2c9a7d1e4f60';
 final unixSocketPath = '/tmp/FlClashSocket_${Random().nextInt(10000)}.sock';
 const helperPort = 47890;
 const maxTextScale = 1.4;

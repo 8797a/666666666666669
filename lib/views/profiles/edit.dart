@@ -1,13 +1,9 @@
-import 'dart:convert';
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/controller.dart';
-import 'package:fl_clash/core/controller.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
-import 'package:fl_clash/pages/editor.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/material.dart';
@@ -31,7 +27,6 @@ class _EditProfileViewState extends State<EditProfileView> {
   late final TextEditingController _urlController;
   late final TextEditingController _autoUpdateDurationController;
   late bool _autoUpdate;
-  String? _rawText;
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final _fileInfoNotifier = ValueNotifier<FileInfo?>(null);
   Uint8List? _fileData;
@@ -103,71 +98,6 @@ class _EditProfileViewState extends State<EditProfileView> {
     setState(() {
       _autoUpdate = value;
     });
-  }
-
-  Future<void> _handleSaveEdit(BuildContext context, String data) async {
-    final message = await appController.safeRun<String>(() async {
-      final message = await coreController.validateConfigWithData(data);
-      return message;
-    }, silence: false);
-    if (message?.isNotEmpty == true) {
-      globalState.showMessage(
-        title: appLocalizations.tip,
-        message: TextSpan(text: message),
-      );
-      return;
-    }
-    if (context.mounted) {
-      Navigator.of(context).pop(data);
-    }
-  }
-
-  Future<void> _editProfileFile() async {
-    if (_rawText == null) {
-      final profilePath = await appPath.getProfilePath(
-        widget.profile.id.toString(),
-      );
-      final file = File(profilePath);
-      if (await file.exists()) {
-        _rawText = await file.readAsString();
-      }
-    }
-    if (!mounted) return;
-    final title = widget.profile.label.takeFirstValid([
-      widget.profile.id.toString(),
-    ]);
-    final editorPage = EditorPage(
-      title: title,
-      content: _rawText!,
-      onSave: (context, _, content) {
-        _handleSaveEdit(context, content);
-      },
-      onPop: (context, _, content) async {
-        if (content == _rawText) {
-          return true;
-        }
-        final res = await globalState.showMessage(
-          title: title,
-          message: TextSpan(text: appLocalizations.hasCacheChange),
-        );
-        if (res == true && context.mounted) {
-          _handleSaveEdit(context, content);
-        } else {
-          return true;
-        }
-        return false;
-      },
-    );
-    final data = await BaseNavigator.push<String>(context, editorPage);
-    if (data == null) {
-      return;
-    }
-    _rawText = data;
-    _fileData = Uint8List.fromList(utf8.encode(data));
-    _fileInfoNotifier.value = _fileInfoNotifier.value?.copyWith(
-      size: _fileData?.length ?? 0,
-      lastModified: DateTime.now(),
-    );
   }
 
   Future<void> _uploadProfileFile() async {
@@ -300,11 +230,6 @@ class _EditProfileViewState extends State<EditProfileView> {
                           runSpacing: 6,
                           spacing: 12,
                           children: [
-                            CommonChip(
-                              avatar: const Icon(Icons.edit),
-                              label: appLocalizations.edit,
-                              onPressed: _editProfileFile,
-                            ),
                             CommonChip(
                               avatar: const Icon(Icons.upload),
                               label: appLocalizations.upload,

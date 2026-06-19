@@ -24,7 +24,7 @@ on Mobile:
 
 ## Features
 
-✈️ 多平台: Android, Windows, macOS and Linux
+✈️ 多平台: Android, Windows and macOS
 
 💻 自适应多个屏幕尺寸,多种颜色主题可供选择
 
@@ -35,15 +35,6 @@ on Mobile:
 ✨ 支持一键导入订阅, 深色模式
 
 ## Use
-
-### Linux
-
-⚠️ 使用前请确保安装以下依赖
-
-   ```bash
-    sudo apt-get install libayatana-appindicator3-dev
-    sudo apt-get install libkeybinder-3.0-dev
-   ```
 
 ### Android
 
@@ -94,16 +85,6 @@ on Mobile:
 
            ```bash
            dart .\setup.dart windows --arch <arm64 | amd64>
-           ```
-
-    - linux
-
-        1. 你需要一个linux客户端
-
-        2. 运行构建脚本
-
-           ```bash
-           dart .\setup.dart linux --arch <arm64 | amd64>
            ```
 
     - macOS

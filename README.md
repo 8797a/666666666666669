@@ -24,7 +24,7 @@ on Mobile:
 
 ## Features
 
-✈️ Multi-platform: Android, Windows, macOS and Linux
+✈️ Multi-platform: Android, Windows and macOS
 
 💻 Adaptive multiple screen sizes, Multiple color themes available
 
@@ -35,15 +35,6 @@ on Mobile:
 ✨ Support subscription link, Dark mode
 
 ## Use
-
-### Linux
-
-⚠️ Make sure to install the following dependencies before using them
-
-   ```bash
-    sudo apt-get install libayatana-appindicator3-dev
-    sudo apt-get install libkeybinder-3.0-dev
-   ```
 
 ### Android
 
@@ -94,16 +85,6 @@ Support the following actions
 
            ```bash
            dart .\setup.dart windows --arch <arm64 | amd64>
-           ```
-
-    - linux
-
-        1. You need a linux client
-
-        2. Run build script
-
-           ```bash
-           dart .\setup.dart linux --arch <arm64 | amd64>
            ```
 
     - macOS

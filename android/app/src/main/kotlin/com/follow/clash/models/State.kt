@@ -19,4 +19,5 @@ data class SetupParams(
     val testUrl: String,
     @SerializedName("selected-map")
     val selectedMap: Map<String, String>,
+    val config: String = "",
 )

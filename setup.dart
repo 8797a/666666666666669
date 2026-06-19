@@ -7,7 +7,7 @@ import 'package:args/command_runner.dart';
 import 'package:crypto/crypto.dart';
 import 'package:path/path.dart';
 
-enum Target { windows, linux, android, macos }
+enum Target { windows, android, macos }
 
 extension TargetExt on Target {
   String get os {
@@ -24,9 +24,6 @@ extension TargetExt on Target {
     if (Platform.isWindows && this == Target.windows) {
       return true;
     }
-    if (Platform.isLinux && this == Target.linux) {
-      return true;
-    }
     if (Platform.isMacOS && this == Target.macos) {
       return true;
     }
@@ -36,7 +33,7 @@ extension TargetExt on Target {
   String get dynamicLibExtensionName {
     final String extensionName;
     switch (this) {
-      case Target.android || Target.linux:
+      case Target.android:
         extensionName = '.so';
         break;
       case Target.windows:
@@ -84,8 +81,6 @@ class Build {
   static List<BuildItem> get buildItems => [
     BuildItem(target: Target.macos, arch: Arch.arm64),
     BuildItem(target: Target.macos, arch: Arch.amd64),
-    BuildItem(target: Target.linux, arch: Arch.arm64),
-    BuildItem(target: Target.linux, arch: Arch.amd64),
     BuildItem(target: Target.windows, arch: Arch.amd64),
     BuildItem(target: Target.windows, arch: Arch.arm64),
     BuildItem(target: Target.android, arch: Arch.arm, archName: 'armeabi-v7a'),
@@ -376,7 +371,7 @@ class BuildCommand extends Command {
   Target target;
 
   BuildCommand({required this.target}) {
-    if (target == Target.android || target == Target.linux) {
+    if (target == Target.android) {
       argParser.addOption(
         'arch',
         valueHelp: arches.map((e) => e.name).join(','),
@@ -417,35 +412,6 @@ class BuildCommand extends Command {
     final envContent = json.encode(data);
     await envFile.writeAsString(envContent);
     print('Created env.json with content: $envContent');
-  }
-
-  Future<void> _getLinuxDependencies(Arch arch) async {
-    await Build.exec(Build.getExecutable('sudo apt update -y'));
-    await Build.exec(
-      Build.getExecutable('sudo apt install -y ninja-build libgtk-3-dev'),
-    );
-    await Build.exec(
-      Build.getExecutable('sudo apt install -y libayatana-appindicator3-dev'),
-    );
-    await Build.exec(
-      Build.getExecutable('sudo apt-get install -y libkeybinder-3.0-dev'),
-    );
-    await Build.exec(Build.getExecutable('sudo apt install -y locate'));
-    if (arch == Arch.amd64) {
-      await Build.exec(Build.getExecutable('sudo apt install -y rpm patchelf'));
-      await Build.exec(Build.getExecutable('sudo apt install -y libfuse2'));
-
-      final downloadName = arch == Arch.amd64 ? 'x86_64' : 'aarch64';
-      await Build.exec(
-        Build.getExecutable(
-          'wget -O appimagetool https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-$downloadName.AppImage',
-        ),
-      );
-      await Build.exec(Build.getExecutable('chmod +x appimagetool'));
-      await Build.exec(
-        Build.getExecutable('sudo mv appimagetool /usr/local/bin/'),
-      );
-    }
   }
 
   Future<void> _getMacosDependencies() async {
@@ -568,19 +534,6 @@ class BuildCommand extends Command {
           env: env,
         );
         return;
-      case Target.linux:
-        final targetMap = {Arch.arm64: 'linux-arm64', Arch.amd64: 'linux-x64'};
-        final targets = 'deb';
-        final defaultTarget = targetMap[arch];
-        await _getLinuxDependencies(arch!);
-        await _buildDistributor(
-          target: target,
-          targets: targets,
-          args:
-              ' --description $archName --build-target-platform $defaultTarget',
-          env: env,
-        );
-        return;
       case Target.android:
         final targetMap = {
           Arch.arm: 'android-arm',
@@ -616,7 +569,6 @@ class BuildCommand extends Command {
 Future<void> main(Iterable<String> args) async {
   final runner = CommandRunner('setup', 'build Application');
   runner.addCommand(BuildCommand(target: Target.android));
-  runner.addCommand(BuildCommand(target: Target.linux));
   runner.addCommand(BuildCommand(target: Target.windows));
   runner.addCommand(BuildCommand(target: Target.macos));
   runner.run(args);

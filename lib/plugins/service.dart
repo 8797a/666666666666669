@@ -74,9 +74,13 @@ class Service {
   }
 
   Future<String> syncState(SharedState state) async {
+    return await syncStateData(json.encode(state));
+  }
+
+  Future<String> syncStateData(String data) async {
     return await methodChannel.invokeMethod<String>(
           'syncState',
-          json.encode(state),
+          data,
         ) ??
         '';
   }

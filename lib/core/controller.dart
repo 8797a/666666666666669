@@ -77,12 +77,7 @@ class CoreController {
   }
 
   Future<String> validateConfigWithData(String data) async {
-    final path = await appPath.tempFilePath;
-    final file = File(path);
-    await file.safeWriteAsString(data);
-    final res = await _interface.validateConfig(path);
-    await File(path).safeDelete();
-    return res;
+    return await _interface.validateConfigData(data);
   }
 
   Future<String> updateConfig(UpdateParams updateParams) async {
@@ -92,9 +87,10 @@ class CoreController {
   Future<String> setupConfig({
     required SetupParams params,
     required SetupState setupState,
+    required String config,
     VoidCallback? preloadInvoke,
   }) async {
-    final res = _interface.setupConfig(params);
+    final res = _interface.setupConfig(params, config: config);
     if (preloadInvoke != null) {
       preloadInvoke();
     }
@@ -199,7 +195,10 @@ class CoreController {
 
   Future<Map<String, dynamic>> getConfig(int id) async {
     final profilePath = await appPath.getProfilePath(id.toString());
-    final res = await _interface.getConfig(profilePath);
+    final profileFile = File(profilePath);
+    final res = await _interface.getConfigData(
+      await readProfilePlainString(profileFile),
+    );
     if (res.isSuccess) {
       final data = Map<String, dynamic>.from(res.data);
       data['rules'] = data['rule'];

@@ -9,7 +9,3 @@ targets:
   android-apk:
     target: apk
     platform: android
-  
-  linux-deb:
-    target: deb
-    platform: linux

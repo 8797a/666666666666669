@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$SubscriptionInfo {
 
- int get upload; int get download; int get total; int get expire;
+ int get upload; int get download; int get total; int get expire; int get dailyTraffic; int get serverTime; String get planName;
 /// Create a copy of SubscriptionInfo
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $SubscriptionInfoCopyWith<SubscriptionInfo> get copyWith => _$SubscriptionInfoCo
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is SubscriptionInfo&&(identical(other.upload, upload) || other.upload == upload)&&(identical(other.download, download) || other.download == download)&&(identical(other.total, total) || other.total == total)&&(identical(other.expire, expire) || other.expire == expire));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is SubscriptionInfo&&(identical(other.upload, upload) || other.upload == upload)&&(identical(other.download, download) || other.download == download)&&(identical(other.total, total) || other.total == total)&&(identical(other.expire, expire) || other.expire == expire)&&(identical(other.dailyTraffic, dailyTraffic) || other.dailyTraffic == dailyTraffic)&&(identical(other.serverTime, serverTime) || other.serverTime == serverTime)&&(identical(other.planName, planName) || other.planName == planName));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,upload,download,total,expire);
+int get hashCode => Object.hash(runtimeType,upload,download,total,expire,dailyTraffic,serverTime,planName);
 
 @override
 String toString() {
-  return 'SubscriptionInfo(upload: $upload, download: $download, total: $total, expire: $expire)';
+  return 'SubscriptionInfo(upload: $upload, download: $download, total: $total, expire: $expire, dailyTraffic: $dailyTraffic, serverTime: $serverTime, planName: $planName)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $SubscriptionInfoCopyWith<$Res>  {
   factory $SubscriptionInfoCopyWith(SubscriptionInfo value, $Res Function(SubscriptionInfo) _then) = _$SubscriptionInfoCopyWithImpl;
 @useResult
 $Res call({
- int upload, int download, int total, int expire
+ int upload, int download, int total, int expire, int dailyTraffic, int serverTime, String planName
 });
 
 
@@ -65,13 +65,16 @@ class _$SubscriptionInfoCopyWithImpl<$Res>
 
 /// Create a copy of SubscriptionInfo
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? upload = null,Object? download = null,Object? total = null,Object? expire = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? upload = null,Object? download = null,Object? total = null,Object? expire = null,Object? dailyTraffic = null,Object? serverTime = null,Object? planName = null,}) {
   return _then(_self.copyWith(
 upload: null == upload ? _self.upload : upload // ignore: cast_nullable_to_non_nullable
 as int,download: null == download ? _self.download : download // ignore: cast_nullable_to_non_nullable
 as int,total: null == total ? _self.total : total // ignore: cast_nullable_to_non_nullable
 as int,expire: null == expire ? _self.expire : expire // ignore: cast_nullable_to_non_nullable
-as int,
+as int,dailyTraffic: null == dailyTraffic ? _self.dailyTraffic : dailyTraffic // ignore: cast_nullable_to_non_nullable
+as int,serverTime: null == serverTime ? _self.serverTime : serverTime // ignore: cast_nullable_to_non_nullable
+as int,planName: null == planName ? _self.planName : planName // ignore: cast_nullable_to_non_nullable
+as String,
   ));
 }
 
@@ -156,10 +159,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int upload,  int download,  int total,  int expire)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int upload,  int download,  int total,  int expire,  int dailyTraffic,  int serverTime,  String planName)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _SubscriptionInfo() when $default != null:
-return $default(_that.upload,_that.download,_that.total,_that.expire);case _:
+return $default(_that.upload,_that.download,_that.total,_that.expire,_that.dailyTraffic,_that.serverTime,_that.planName);case _:
   return orElse();
 
 }
@@ -177,10 +180,10 @@ return $default(_that.upload,_that.download,_that.total,_that.expire);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int upload,  int download,  int total,  int expire)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int upload,  int download,  int total,  int expire,  int dailyTraffic,  int serverTime,  String planName)  $default,) {final _that = this;
 switch (_that) {
 case _SubscriptionInfo():
-return $default(_that.upload,_that.download,_that.total,_that.expire);case _:
+return $default(_that.upload,_that.download,_that.total,_that.expire,_that.dailyTraffic,_that.serverTime,_that.planName);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -197,10 +200,10 @@ return $default(_that.upload,_that.download,_that.total,_that.expire);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int upload,  int download,  int total,  int expire)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int upload,  int download,  int total,  int expire,  int dailyTraffic,  int serverTime,  String planName)?  $default,) {final _that = this;
 switch (_that) {
 case _SubscriptionInfo() when $default != null:
-return $default(_that.upload,_that.download,_that.total,_that.expire);case _:
+return $default(_that.upload,_that.download,_that.total,_that.expire,_that.dailyTraffic,_that.serverTime,_that.planName);case _:
   return null;
 
 }
@@ -212,13 +215,16 @@ return $default(_that.upload,_that.download,_that.total,_that.expire);case _:
 @JsonSerializable()
 
 class _SubscriptionInfo implements SubscriptionInfo {
-  const _SubscriptionInfo({this.upload = 0, this.download = 0, this.total = 0, this.expire = 0});
+  const _SubscriptionInfo({this.upload = 0, this.download = 0, this.total = 0, this.expire = 0, this.dailyTraffic = 0, this.serverTime = 0, this.planName = ''});
   factory _SubscriptionInfo.fromJson(Map<String, dynamic> json) => _$SubscriptionInfoFromJson(json);
 
 @override@JsonKey() final  int upload;
 @override@JsonKey() final  int download;
 @override@JsonKey() final  int total;
 @override@JsonKey() final  int expire;
+@override@JsonKey() final  int dailyTraffic;
+@override@JsonKey() final  int serverTime;
+@override@JsonKey() final  String planName;
 
 /// Create a copy of SubscriptionInfo
 /// with the given fields replaced by the non-null parameter values.
@@ -233,16 +239,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _SubscriptionInfo&&(identical(other.upload, upload) || other.upload == upload)&&(identical(other.download, download) || other.download == download)&&(identical(other.total, total) || other.total == total)&&(identical(other.expire, expire) || other.expire == expire));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _SubscriptionInfo&&(identical(other.upload, upload) || other.upload == upload)&&(identical(other.download, download) || other.download == download)&&(identical(other.total, total) || other.total == total)&&(identical(other.expire, expire) || other.expire == expire)&&(identical(other.dailyTraffic, dailyTraffic) || other.dailyTraffic == dailyTraffic)&&(identical(other.serverTime, serverTime) || other.serverTime == serverTime)&&(identical(other.planName, planName) || other.planName == planName));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,upload,download,total,expire);
+int get hashCode => Object.hash(runtimeType,upload,download,total,expire,dailyTraffic,serverTime,planName);
 
 @override
 String toString() {
-  return 'SubscriptionInfo(upload: $upload, download: $download, total: $total, expire: $expire)';
+  return 'SubscriptionInfo(upload: $upload, download: $download, total: $total, expire: $expire, dailyTraffic: $dailyTraffic, serverTime: $serverTime, planName: $planName)';
 }
 
 
@@ -253,7 +259,7 @@ abstract mixin class _$SubscriptionInfoCopyWith<$Res> implements $SubscriptionIn
   factory _$SubscriptionInfoCopyWith(_SubscriptionInfo value, $Res Function(_SubscriptionInfo) _then) = __$SubscriptionInfoCopyWithImpl;
 @override @useResult
 $Res call({
- int upload, int download, int total, int expire
+ int upload, int download, int total, int expire, int dailyTraffic, int serverTime, String planName
 });
 
 
@@ -270,13 +276,16 @@ class __$SubscriptionInfoCopyWithImpl<$Res>
 
 /// Create a copy of SubscriptionInfo
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? upload = null,Object? download = null,Object? total = null,Object? expire = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? upload = null,Object? download = null,Object? total = null,Object? expire = null,Object? dailyTraffic = null,Object? serverTime = null,Object? planName = null,}) {
   return _then(_SubscriptionInfo(
 upload: null == upload ? _self.upload : upload // ignore: cast_nullable_to_non_nullable
 as int,download: null == download ? _self.download : download // ignore: cast_nullable_to_non_nullable
 as int,total: null == total ? _self.total : total // ignore: cast_nullable_to_non_nullable
 as int,expire: null == expire ? _self.expire : expire // ignore: cast_nullable_to_non_nullable
-as int,
+as int,dailyTraffic: null == dailyTraffic ? _self.dailyTraffic : dailyTraffic // ignore: cast_nullable_to_non_nullable
+as int,serverTime: null == serverTime ? _self.serverTime : serverTime // ignore: cast_nullable_to_non_nullable
+as int,planName: null == planName ? _self.planName : planName // ignore: cast_nullable_to_non_nullable
+as String,
   ));
 }
 

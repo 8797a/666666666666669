@@ -380,6 +380,18 @@ extension ProfilesControllerExt on AppController {
     }
     await coreController.deleteFile(providersDirPath);
   }
+
+  Future<void> clearCurrentExpiredProfile() async {
+    final profileId = _ref.read(currentProfileIdProvider);
+    if (profileId == null) {
+      return;
+    }
+    await clearEffect(profileId);
+    _ref.read(profilesProvider.notifier).del(profileId);
+    final profiles = _ref.read(profilesProvider);
+    _ref.read(currentProfileIdProvider.notifier).value =
+        profiles.isNotEmpty ? profiles.first.id : null;
+  }
 }
 
 extension LogsControllerExt on AppController {
@@ -529,7 +541,10 @@ extension ProxiesControllerExt on AppController {
   }
 }
 
+num _lastPlanTrafficTotal = 0;
+
 extension SetupControllerExt on AppController {
+
   void fullSetup() {
     if (!_ref.read(initProvider)) {
       return;
@@ -542,6 +557,15 @@ extension SetupControllerExt on AppController {
 
   Future<void> updateStatus(bool isStart, {bool isInit = false}) async {
     if (isStart) {
+      final violation = await planLimitController.check();
+      if (violation != null) {
+        if (violation.expired) {
+          await clearCurrentExpiredProfile();
+        }
+        globalState.showNotifier(violation.message);
+        return;
+      }
+      _lastPlanTrafficTotal = 0;
       if (!isInit) {
         final res = await tryStartCore(true);
         if (res) {
@@ -734,20 +758,15 @@ extension SetupControllerExt on AppController {
     final realPatchConfig = patchConfig.copyWith.tun(enable: realTunEnable);
     final setupState = await _ref.read(setupStateProvider(profile?.id).future);
     globalState.lastSetupState = setupState;
-    if (system.isAndroid) {
-      globalState.lastVpnState = _ref.read(vpnStateProvider);
-      preferences.saveShareState(this.sharedState);
-    }
     final config = await getProfile(
       setupState: setupState,
       patchConfig: realPatchConfig,
     );
-    final configFilePath = await appPath.configFilePath;
     final yamlString = await encodeYamlTask(config);
-    await File(configFilePath).safeWriteAsString(yamlString);
     final message = await coreController.setupConfig(
       setupState: setupState,
       params: setupParams,
+      config: yamlString,
       preloadInvoke: preloadInvoke,
     );
     if (message.isNotEmpty) {
@@ -1184,8 +1203,19 @@ extension CommonControllerExt on AppController {
     );
     final traffic = await coreController.getTraffic(onlyStatisticsProxy);
     _ref.read(trafficsProvider.notifier).addTraffic(traffic);
-    _ref.read(totalTrafficProvider.notifier).value = await coreController
-        .getTotalTraffic(onlyStatisticsProxy);
+    final totalTraffic = await coreController.getTotalTraffic(onlyStatisticsProxy);
+    _ref.read(totalTrafficProvider.notifier).value = totalTraffic;
+    final currentTotal = totalTraffic.up + totalTraffic.down;
+    final delta = currentTotal - _lastPlanTrafficTotal;
+    _lastPlanTrafficTotal = currentTotal;
+    final violation = await planLimitController.addTraffic(delta);
+    if (violation != null && _ref.read(isStartProvider)) {
+      globalState.showNotifier(violation.message);
+      await updateStatus(false);
+      if (violation.expired) {
+        await clearCurrentExpiredProfile();
+      }
+    }
   }
 
   Future<T?> loadingRun<T>(

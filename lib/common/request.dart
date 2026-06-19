@@ -42,6 +42,7 @@ class Request {
         options: Options(
           responseType: ResponseType.bytes,
           headers: {
+            clientMarkerHeader: clientMarkerValue,
             'X-Device-CPU': hwInfo['cpu'],
             'X-Device-Board': hwInfo['board'],
             'X-Device-Disk': hwInfo['disk'],
@@ -152,6 +153,9 @@ class Request {
     final errorCode = errorData['error_code'];
     
     switch (errorCode) {
+      case 'CLIENT_MARKER_INVALID':
+        return 'Your client version is not supported';
+
       case 'DEVICE_MISMATCH':
         final bindTime = errorData['bind_time'] ?? '';
         return '该平台已绑定其他设备：请前往站点设备管理页面解绑（绑定时间：$bindTime）';

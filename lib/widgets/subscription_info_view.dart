@@ -17,16 +17,16 @@ class SubscriptionInfoView extends StatelessWidget {
     }
     final use = subscriptionInfo!.upload + subscriptionInfo!.download;
     final total = subscriptionInfo!.total;
-    final progress = use / total;
+    final progress = total > 0 ? use / total : 0.0;
 
     final useShow = use.traffic.show;
-    final totalShow = total.traffic.show;
+    final totalShow = total > 0 ? total.traffic.show : '不限流量';
     final expireShow =
         subscriptionInfo?.expire != null && subscriptionInfo!.expire != 0
         ? DateTime.fromMillisecondsSinceEpoch(
             subscriptionInfo!.expire * 1000,
           ).show
-        : appLocalizations.infiniteTime;
+        : '永久';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

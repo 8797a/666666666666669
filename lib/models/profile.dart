@@ -19,6 +19,9 @@ abstract class SubscriptionInfo with _$SubscriptionInfo {
     @Default(0) int download,
     @Default(0) int total,
     @Default(0) int expire,
+    @Default(0) int dailyTraffic,
+    @Default(0) int serverTime,
+    @Default('') String planName,
   }) = _SubscriptionInfo;
 
   factory SubscriptionInfo.fromJson(Map<String, Object?> json) =>
@@ -37,6 +40,22 @@ abstract class SubscriptionInfo with _$SubscriptionInfo {
       download: map['download'] ?? 0,
       total: map['total'] ?? 0,
       expire: map['expire'] ?? 0,
+    );
+  }
+
+  factory SubscriptionInfo.fromHeaders({
+    required String? userinfo,
+    required String? planName,
+    required String? dailyTraffic,
+    required String? totalTraffic,
+    required String? serverTime,
+  }) {
+    final info = SubscriptionInfo.formHString(userinfo);
+    return info.copyWith(
+      planName: Uri.decodeComponent(planName ?? ''),
+      dailyTraffic: int.tryParse(dailyTraffic ?? '') ?? 0,
+      total: int.tryParse(totalTraffic ?? '') ?? info.total,
+      serverTime: int.tryParse(serverTime ?? '') ?? 0,
     );
   }
 }
@@ -214,36 +233,45 @@ extension ProfileExtension on Profile {
     final response = await request.getFileResponseForUrl(url);
     final disposition = response.headers.value('content-disposition');
     final userinfo = response.headers.value('subscription-userinfo');
+    final subscriptionInfo = SubscriptionInfo.fromHeaders(
+      userinfo: userinfo,
+      planName: response.headers.value('x-plan-name'),
+      dailyTraffic: response.headers.value('x-plan-daily-traffic'),
+      totalTraffic: response.headers.value('x-plan-total-traffic'),
+      serverTime: response.headers.value('x-plan-server-time'),
+    );
+    await planLimitController.saveFromSubscriptionInfo(subscriptionInfo);
     return await copyWith(
       label: label.takeFirstValid([
         utils.getFileNameForDisposition(disposition),
         id.toString(),
       ]),
-      subscriptionInfo: SubscriptionInfo.formHString(userinfo),
+      subscriptionInfo: subscriptionInfo,
     ).saveFile(response.data ?? Uint8List.fromList([]));
   }
 
   Future<Profile> saveFile(Uint8List bytes) async {
-    final path = await appPath.tempFilePath;
-    final tempFile = File(path);
-    await tempFile.safeWriteAsBytes(bytes);
-    final message = await coreController.validateConfig(path);
+    final message = await coreController.validateConfigWithData(
+      utf8.decode(bytes),
+    );
     if (message.isNotEmpty) {
       throw message;
     }
     final mFile = await file;
-    await tempFile.copy(mFile.path);
-    await tempFile.safeDelete();
+    await writeEncryptedProfileFile(mFile, bytes);
     return copyWith(lastUpdateDate: DateTime.now());
   }
 
   Future<Profile> saveFileWithPath(String path) async {
-    final message = await coreController.validateConfig(path);
+    final bytes = await File(path).readAsBytes();
+    final message = await coreController.validateConfigWithData(
+      utf8.decode(bytes),
+    );
     if (message.isNotEmpty) {
       throw message;
     }
     final mFile = await file;
-    await File(path).copy(mFile.path);
+    await writeEncryptedProfileFile(mFile, Uint8List.fromList(bytes));
     return copyWith(lastUpdateDate: DateTime.now());
   }
 }

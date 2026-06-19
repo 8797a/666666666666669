@@ -24,7 +24,6 @@ import (
 	rp "github.com/metacubex/mihomo/rules/provider"
 	"github.com/metacubex/mihomo/tunnel"
 	"os"
-	"path/filepath"
 	"runtime"
 	"sync"
 )
@@ -162,6 +161,7 @@ func defaultSetupParams() *SetupParams {
 	return &SetupParams{
 		TestURL:     "https://www.gstatic.com/generate_204",
 		SelectedMap: map[string]string{},
+		Config:      "",
 	}
 }
 
@@ -241,7 +241,14 @@ func applyConfig(params *SetupParams) error {
 	defer runLock.Unlock()
 	var err error
 	constant.DefaultTestURL = params.TestURL
-	currentConfig, err = executor.ParseWithPath(filepath.Join(constant.Path.HomeDir(), "config.yaml"))
+	var rawConfig *config.RawConfig
+	if params.Config == "" {
+		return errors.New("config is empty")
+	}
+	rawConfig, err = config.UnmarshalRawConfig([]byte(params.Config))
+	if err == nil {
+		currentConfig, err = config.ParseRawConfig(rawConfig)
+	}
 	if err != nil {
 		currentConfig, _ = config.ParseRawConfig(config.DefaultRawConfig())
 	}

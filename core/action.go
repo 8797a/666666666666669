@@ -56,6 +56,10 @@ func handleAction(action *Action, result ActionResult) {
 		path := action.Data.(string)
 		result.success(handleValidateConfig(path))
 		return
+	case validateConfigDataMethod:
+		data := action.Data.(string)
+		result.success(handleValidateConfigData(data))
+		return
 	case updateConfigMethod:
 		data := []byte(action.Data.(string))
 		result.success(handleUpdateConfig(data))
@@ -103,6 +107,15 @@ func handleAction(action *Action, result ActionResult) {
 	case getConfigMethod:
 		path := action.Data.(string)
 		config, err := handleGetConfig(path)
+		if err != nil {
+			result.error(err)
+			return
+		}
+		result.success(config)
+		return
+	case getConfigDataMethod:
+		data := action.Data.(string)
+		config, err := handleGetConfigData(data)
 		if err != nil {
 			result.error(err)
 			return

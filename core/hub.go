@@ -89,7 +89,18 @@ func handleShutdown() bool {
 
 func handleValidateConfig(path string) string {
 	buf, err := readFile(path)
+	if err != nil {
+		return err.Error()
+	}
 	_, err = config.UnmarshalRawConfig(buf)
+	if err != nil {
+		return err.Error()
+	}
+	return ""
+}
+
+func handleValidateConfigData(data string) string {
+	_, err := config.UnmarshalRawConfig([]byte(data))
 	if err != nil {
 		return err.Error()
 	}
@@ -487,7 +498,11 @@ func handleGetConfig(path string) (*config.RawConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	prof, err := config.UnmarshalRawConfig(bytes)
+	return handleGetConfigData(string(bytes))
+}
+
+func handleGetConfigData(data string) (*config.RawConfig, error) {
+	prof, err := config.UnmarshalRawConfig([]byte(data))
 	if err != nil {
 		return nil, err
 	}

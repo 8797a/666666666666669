@@ -242,21 +242,6 @@ class ProfileItem extends StatelessWidget {
     }
   }
 
-  Future<void> _handleExportFile(BuildContext context) async {
-    final res = await appController.safeRun<bool>(() async {
-      final mFile = await profile.file;
-      final value = await picker.saveFile(
-        profile.realLabel,
-        mFile.readAsBytesSync(),
-      );
-      if (value == null) return false;
-      return true;
-    }, title: appLocalizations.tip);
-    if (res == true && context.mounted) {
-      context.showNotifier(appLocalizations.exportSuccess);
-    }
-  }
-
   void _handlePushGenProfilePage(BuildContext context, int id) {
     BaseNavigator.push(context, OverwriteView(profileId: id));
   }
