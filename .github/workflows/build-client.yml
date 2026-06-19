@@ -56,11 +56,23 @@ jobs:
       - name: Build Windows app
         run: dart setup.dart windows --arch amd64 --env stable
 
+      - name: Collect Windows artifacts
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path artifacts | Out-Null
+          if (Test-Path dist) {
+            Copy-Item -Path dist\* -Destination artifacts -Recurse -Force -ErrorAction SilentlyContinue
+          }
+          if (Test-Path build\windows\x64\runner\Release) {
+            Copy-Item -Path build\windows\x64\runner\Release -Destination artifacts\windows-release -Recurse -Force
+          }
+          Get-ChildItem -Path artifacts -Recurse -Force | Select-Object FullName,Length
+
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
           name: FlClash-Windows
-          path: dist/**/*
+          path: artifacts/**
           if-no-files-found: error
           retention-days: 30
 
@@ -131,10 +143,18 @@ jobs:
           ANDROID_SDK_ROOT: ${{ env.ANDROID_HOME }}
           GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx4096m -Dorg.gradle.daemon=false
 
+      - name: Collect Android artifacts
+        run: |
+          mkdir -p artifacts
+          if [ -d dist ]; then cp -R dist/. artifacts/; fi
+          find build/app/outputs -name "*.apk" -exec cp {} artifacts/ \; 2>/dev/null || true
+          find build/app/outputs -name "*.aab" -exec cp {} artifacts/ \; 2>/dev/null || true
+          find artifacts -type f -maxdepth 3 -print
+
       - name: Upload Android artifacts
         uses: actions/upload-artifact@v4
         with:
           name: FlClash-Android-arm64-v8a
-          path: dist/**/*
+          path: artifacts/**
           if-no-files-found: error
           retention-days: 30
