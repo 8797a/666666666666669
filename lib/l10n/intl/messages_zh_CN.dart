@@ -202,7 +202,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "direct": MessageLookupByLibrary.simpleMessage("直连"),
     "disclaimer": MessageLookupByLibrary.simpleMessage("免责声明"),
     "disclaimerDesc": MessageLookupByLibrary.simpleMessage(
-      "本软件仅供学习交流、科研等非商业性质的用途，严禁将本软件用于商业目的。如有任何商业行为，均与本软件无关。",
+      "本软件已开GitHub开源，无广告无病毒，本软件仅供学习交流，科研等合规性质的用途，违规使用由使用者自行承担责任和后果，使用本软件即代表您同意此免责声明。",
     ),
     "disconnected": MessageLookupByLibrary.simpleMessage("已断开"),
     "discoverNewVersion": MessageLookupByLibrary.simpleMessage("发现新版本"),

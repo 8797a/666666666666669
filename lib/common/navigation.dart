@@ -34,14 +34,6 @@ class Navigation {
             const ProfilesView(key: GlobalObjectKey(PageLabel.profiles)),
       ),
       NavigationItem(
-        icon: Icon(Icons.storage),
-        label: PageLabel.resources,
-        description: 'resourcesDesc',
-        builder: (_) =>
-            const ResourcesView(key: GlobalObjectKey(PageLabel.resources)),
-        modes: [NavigationItemMode.more],
-      ),
-      NavigationItem(
         icon: const Icon(Icons.adb),
         label: PageLabel.logs,
         builder: (_) => const LogsView(key: GlobalObjectKey(PageLabel.logs)),

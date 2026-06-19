@@ -2124,10 +2124,10 @@ class AppLocalizations {
     return Intl.message('Disclaimer', name: 'disclaimer', desc: '', args: []);
   }
 
-  /// `This software is only used for non-commercial purposes such as learning exchanges and scientific research. It is strictly prohibited to use this software for commercial purposes. Any commercial activity, if any, has nothing to do with this software.`
+  /// `This software is open source on GitHub, contains no ads or viruses, and is intended only for compliant purposes such as learning, communication, and scientific research. Users are solely responsible for any misuse and its consequences. By using this software, you agree to this disclaimer.`
   String get disclaimerDesc {
     return Intl.message(
-      'This software is only used for non-commercial purposes such as learning exchanges and scientific research. It is strictly prohibited to use this software for commercial purposes. Any commercial activity, if any, has nothing to do with this software.',
+      'This software is open source on GitHub, contains no ads or viruses, and is intended only for compliant purposes such as learning, communication, and scientific research. Users are solely responsible for any misuse and its consequences. By using this software, you agree to this disclaimer.',
       name: 'disclaimerDesc',
       desc: '',
       args: [],

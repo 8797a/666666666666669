@@ -295,7 +295,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "direct": MessageLookupByLibrary.simpleMessage("Direct"),
     "disclaimer": MessageLookupByLibrary.simpleMessage("Disclaimer"),
     "disclaimerDesc": MessageLookupByLibrary.simpleMessage(
-      "This software is only used for non-commercial purposes such as learning exchanges and scientific research. It is strictly prohibited to use this software for commercial purposes. Any commercial activity, if any, has nothing to do with this software.",
+      "This software is open source on GitHub, contains no ads or viruses, and is intended only for compliant purposes such as learning, communication, and scientific research. Users are solely responsible for any misuse and its consequences. By using this software, you agree to this disclaimer.",
     ),
     "disconnected": MessageLookupByLibrary.simpleMessage("Disconnected"),
     "discoverNewVersion": MessageLookupByLibrary.simpleMessage(

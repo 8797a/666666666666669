@@ -277,7 +277,7 @@
   "action_proxy": "系统代理",
   "action_tun": "虚拟网卡",
   "disclaimer": "免责声明",
-  "disclaimerDesc": "本软件已在github开源无广无毒，本软件仅供学习交流、科研等合规性质的用途，违规使用由使用者自行承担责任。",
+  "disclaimerDesc": "本软件已开GitHub开源，无广告无病毒，本软件仅供学习交流，科研等合规性质的用途，违规使用由使用者自行承担责任和后果，使用本软件即代表您同意此免责声明。",
   "agree": "同意",
   "hotkeyManagement": "快捷键管理",
   "hotkeyManagementDesc": "使用键盘控制应用程序",

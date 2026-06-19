@@ -224,7 +224,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "direct": MessageLookupByLibrary.simpleMessage("ダイレクト"),
     "disclaimer": MessageLookupByLibrary.simpleMessage("免責事項"),
     "disclaimerDesc": MessageLookupByLibrary.simpleMessage(
-      "本ソフトウェアは学習交流や科学研究などの非営利目的でのみ使用されます。商用利用は厳禁です。いかなる商用活動も本ソフトウェアとは無関係です。",
+      "本ソフトウェアはGitHubでオープンソース化されており、広告やウイルスは含まれていません。本ソフトウェアは学習、交流、科学研究などの適法な目的でのみ使用できます。不適切な使用およびその結果については使用者自身が責任を負います。本ソフトウェアを使用することにより、本免責事項に同意したものとみなされます。",
     ),
     "disconnected": MessageLookupByLibrary.simpleMessage("切断済み"),
     "discoverNewVersion": MessageLookupByLibrary.simpleMessage("新バージョンを発見"),

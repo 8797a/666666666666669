@@ -9,7 +9,6 @@ import 'package:fl_clash/views/about.dart';
 import 'package:fl_clash/views/access.dart';
 import 'package:fl_clash/views/application_setting.dart';
 import 'package:fl_clash/views/backup_and_restore.dart';
-import 'package:fl_clash/views/config/config.dart';
 import 'package:fl_clash/views/hotkey.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/material.dart';
@@ -17,7 +16,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:path/path.dart' show dirname, join;
 
-import 'config/advanced.dart';
 import 'developer.dart';
 import 'theme.dart';
 
@@ -73,8 +71,6 @@ class _ToolViewState extends ConsumerState<ToolsView> {
         if (system.isDesktop) const _HotkeyItem(),
         if (system.isWindows) const _LoopbackItem(),
         if (system.isAndroid) const _AccessItem(),
-        const _ConfigItem(),
-        const _AdvancedConfigItem(),
         const _SettingItem(),
       ],
     );
@@ -222,34 +218,6 @@ class _AccessItem extends StatelessWidget {
       title: Text(context.appLocalizations.accessControl),
       subtitle: Text(context.appLocalizations.accessControlDesc),
       delegate: OpenDelegate(widget: const AccessView()),
-    );
-  }
-}
-
-class _ConfigItem extends StatelessWidget {
-  const _ConfigItem();
-
-  @override
-  Widget build(BuildContext context) {
-    return ListItem.open(
-      leading: const Icon(Icons.edit),
-      title: Text(context.appLocalizations.basicConfig),
-      subtitle: Text(context.appLocalizations.basicConfigDesc),
-      delegate: OpenDelegate(widget: const ConfigView()),
-    );
-  }
-}
-
-class _AdvancedConfigItem extends StatelessWidget {
-  const _AdvancedConfigItem();
-
-  @override
-  Widget build(BuildContext context) {
-    return ListItem.open(
-      leading: const Icon(Icons.build),
-      title: Text(context.appLocalizations.advancedConfig),
-      subtitle: Text(context.appLocalizations.advancedConfigDesc),
-      delegate: OpenDelegate(widget: const AdvancedConfigView()),
     );
   }
 }
