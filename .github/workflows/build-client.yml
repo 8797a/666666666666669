@@ -57,14 +57,11 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path artifacts | Out-Null
-          if (Test-Path dist) {
-            Copy-Item -Path dist\* -Destination artifacts -Recurse -Force -ErrorAction SilentlyContinue
-          }
           if (Test-Path build\windows\x64\runner\Release) {
             Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath artifacts\FlClash-Windows-Release.zip -Force
           }
-          Get-ChildItem -Path . -Recurse -Include *.exe,*.zip,*.msix,*.msi -File -ErrorAction SilentlyContinue | ForEach-Object {
-            if ($_.FullName -notlike "*\.git\*" -and $_.FullName -notlike "*\artifacts\*") {
+          if (Test-Path dist) {
+            Get-ChildItem -Path dist -Recurse -File -Include *.exe,*.zip,*.msix,*.msi | ForEach-Object {
               Copy-Item -LiteralPath $_.FullName -Destination artifacts -Force -ErrorAction SilentlyContinue
             }
           }
