@@ -61,7 +61,17 @@ jobs:
             Copy-Item -Path dist\* -Destination artifacts -Recurse -Force -ErrorAction SilentlyContinue
           }
           if (Test-Path build\windows\x64\runner\Release) {
-            Copy-Item -Path build\windows\x64\runner\Release -Destination artifacts\windows-release -Recurse -Force
+            Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath artifacts\FlClash-Windows-Release.zip -Force
+          }
+          Get-ChildItem -Path . -Recurse -Include *.exe,*.zip,*.msix,*.msi -File -ErrorAction SilentlyContinue | ForEach-Object {
+            if ($_.FullName -notlike "*\.git\*" -and $_.FullName -notlike "*\artifacts\*") {
+              Copy-Item -LiteralPath $_.FullName -Destination artifacts -Force -ErrorAction SilentlyContinue
+            }
+          }
+          if (-not (Get-ChildItem -Path artifacts -File -Recurse -ErrorAction SilentlyContinue)) {
+            Write-Host "No Windows artifacts found. Listing build outputs for debug:"
+            Get-ChildItem -Path build -Recurse -File -ErrorAction SilentlyContinue | Select-Object FullName,Length | Out-String -Width 240
+            exit 1
           }
           Get-ChildItem -Path artifacts -Recurse -Force | Select-Object FullName,Length
 
@@ -144,9 +154,14 @@ jobs:
         run: |
           mkdir -p artifacts
           if [ -d dist ]; then cp -R dist/. artifacts/; fi
-          find build/app/outputs -name "*.apk" -exec cp {} artifacts/ \; 2>/dev/null || true
-          find build/app/outputs -name "*.aab" -exec cp {} artifacts/ \; 2>/dev/null || true
-          find artifacts -type f -maxdepth 3 -print
+          find . -path ./.git -prune -o -name "*.apk" -type f -exec cp {} artifacts/ \; 2>/dev/null || true
+          find . -path ./.git -prune -o -name "*.aab" -type f -exec cp {} artifacts/ \; 2>/dev/null || true
+          if ! find artifacts -type f | grep -q .; then
+            echo "No Android artifacts found. Listing build outputs for debug:"
+            find build -type f | sed 's#^#  #' || true
+            exit 1
+          fi
+          find artifacts -type f -print
 
       - name: Upload Android artifacts
         uses: actions/upload-artifact@v4
