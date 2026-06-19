@@ -50,8 +50,11 @@ jobs:
       - name: Get Flutter dependencies
         run: flutter pub get
 
+      - name: Prepare Windows core
+        run: dart setup.dart windows --arch amd64 --out core --env stable
+
       - name: Build Windows app
-        run: dart setup.dart windows --arch amd64 --env stable
+        run: flutter build windows --release --dart-define-from-file=env.json
 
       - name: Collect Windows artifacts
         shell: pwsh
