@@ -31,7 +31,7 @@ class _AndroidContainerState extends ConsumerState<AndroidManager>
     ) {
       app?.updateExcludeFromRecents(next);
     }, fireImmediately: true);
-    ref.listenManual(sharedStateProvider, (prev, next) {
+    ref.listenManual(sharedStateProvider, (prev, next) async {
       if (prev != next) {
         debouncer.call(FunctionTag.saveSharedFile, () async {
           preferences.saveShareState(next.needSyncSharedState);
