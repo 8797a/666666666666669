@@ -1,0 +1,138 @@
+name: Build Client
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - 'v*'
+
+jobs:
+  build-windows:
+    name: Build Windows
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set submodule HTTPS URLs
+        shell: pwsh
+        run: |
+          git config submodule.core/Clash.Meta.url https://github.com/chen08209/Clash.Meta.git
+          git config submodule.plugins/flutter_distributor.url https://github.com/chen08209/flutter_distributor.git
+          git config submodule.plugins/tray_manager.url https://github.com/chen08209/tray_manager.git
+          git submodule sync --recursive
+          git submodule update --init --recursive
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: beta
+          cache: true
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache-dependency-path: core/go.sum
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Enable Windows desktop
+        run: flutter config --enable-windows-desktop
+
+      - name: Get Flutter dependencies
+        run: flutter pub get
+
+      - name: Generate Dart code
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Build Windows app
+        run: dart setup.dart windows --arch amd64 --env stable
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: FlClash-Windows
+          path: dist/**/*
+          if-no-files-found: error
+          retention-days: 30
+
+  build-android:
+    name: Build Android
+    runs-on: ubuntu-latest
+    steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /opt/hostedtoolcache/CodeQL /usr/share/swift
+          sudo docker image prune --all --force
+          sudo apt-get clean
+          df -h
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set submodule HTTPS URLs
+        run: |
+          git config submodule.core/Clash.Meta.url https://github.com/chen08209/Clash.Meta.git
+          git config submodule.plugins/flutter_distributor.url https://github.com/chen08209/flutter_distributor.git
+          git config submodule.plugins/tray_manager.url https://github.com/chen08209/tray_manager.git
+          git submodule sync --recursive
+          git submodule update --init --recursive
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: beta
+          cache: true
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache-dependency-path: core/go.sum
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r28
+          add-to-path: true
+
+      - name: Configure Android SDK
+        run: |
+          flutter config --android-sdk "$ANDROID_HOME"
+          flutter doctor -v
+
+      - name: Get Flutter dependencies
+        run: flutter pub get
+
+      - name: Generate Dart code
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Build Android APK
+        run: dart setup.dart android --arch arm64-v8a --env stable
+        env:
+          ANDROID_HOME: ${{ env.ANDROID_HOME }}
+          ANDROID_SDK_ROOT: ${{ env.ANDROID_HOME }}
+          GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx4096m -Dorg.gradle.daemon=false
+
+      - name: Upload Android artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: FlClash-Android-arm64-v8a
+          path: dist/**/*
+          if-no-files-found: error
+          retention-days: 30
