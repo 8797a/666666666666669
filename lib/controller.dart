@@ -1209,6 +1209,28 @@ extension CommonControllerExt on AppController {
     final delta = currentTotal - _lastPlanTrafficTotal;
     _lastPlanTrafficTotal = currentTotal;
     final violation = await planLimitController.addTraffic(delta);
+    final planState = await planLimitController.getState();
+    final currentProfile = _ref.read(currentProfileProvider);
+    final currentSubscriptionInfo = currentProfile?.subscriptionInfo;
+    if (currentProfile != null && currentSubscriptionInfo != null) {
+      _ref.read(profilesProvider.notifier).put(
+        currentProfile.copyWith(
+          subscriptionInfo: currentSubscriptionInfo.copyWith(
+            upload: 0,
+            download: planState.totalUsed,
+            total: planState.totalTraffic > 0
+                ? planState.totalTraffic
+                : currentSubscriptionInfo.total,
+            expire: planState.expire > 0
+                ? planState.expire
+                : currentSubscriptionInfo.expire,
+            dailyTraffic: planState.dailyTraffic,
+            serverTime: planState.serverTime,
+            planName: planState.name,
+          ),
+        ),
+      );
+    }
     if (violation != null && _ref.read(isStartProvider)) {
       globalState.showNotifier(violation.message);
       await updateStatus(false);
