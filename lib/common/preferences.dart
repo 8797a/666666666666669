@@ -5,6 +5,9 @@ import 'package:fl_clash/models/models.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'constant.dart';
+import 'profile_crypto.dart';
+
+const _invalidPlanLimitData = '__INVALID_PLAN_LIMIT_DATA__';
 
 class Preferences {
   static Preferences? _instance;
@@ -92,12 +95,20 @@ class Preferences {
 
   Future<String?> getPlanLimitJson() async {
     final preferences = await sharedPreferencesCompleter.future;
-    return preferences?.getString('planLimit');
+    final data = preferences?.getString('planLimit');
+    if (data == null || data.isEmpty) {
+      return data;
+    }
+    try {
+      return await decryptSecureDataString(data);
+    } catch (_) {
+      return _invalidPlanLimitData;
+    }
   }
 
   Future<void> savePlanLimitJson(String data) async {
     final preferences = await sharedPreferencesCompleter.future;
-    await preferences?.setString('planLimit', data);
+    await preferences?.setString('planLimit', await encryptSecureDataString(data));
   }
 
   Future<bool> getLoginState() async {

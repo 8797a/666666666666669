@@ -14,6 +14,7 @@ class PlanLimitState {
   final int dailyUsed;
   final int totalUsed;
   final String dayKey;
+  final bool tampered;
 
   const PlanLimitState({
     this.name = '',
@@ -25,6 +26,7 @@ class PlanLimitState {
     this.dailyUsed = 0,
     this.totalUsed = 0,
     this.dayKey = '',
+    this.tampered = false,
   });
 
   factory PlanLimitState.fromJson(Map<String, Object?> json) {
@@ -38,6 +40,7 @@ class PlanLimitState {
       dailyUsed: (json['dailyUsed'] as num?)?.toInt() ?? 0,
       totalUsed: (json['totalUsed'] as num?)?.toInt() ?? 0,
       dayKey: json['dayKey'] as String? ?? '',
+      tampered: false,
     );
   }
 
@@ -65,6 +68,7 @@ class PlanLimitState {
     int? dailyUsed,
     int? totalUsed,
     String? dayKey,
+    bool? tampered,
   }) {
     return PlanLimitState(
       name: name ?? this.name,
@@ -76,6 +80,7 @@ class PlanLimitState {
       dailyUsed: dailyUsed ?? this.dailyUsed,
       totalUsed: totalUsed ?? this.totalUsed,
       dayKey: dayKey ?? this.dayKey,
+      tampered: tampered ?? this.tampered,
     );
   }
 }
@@ -93,10 +98,13 @@ class PlanLimitController {
     if (data == null || data.isEmpty) {
       return const PlanLimitState();
     }
+    if (data == _invalidPlanLimitData) {
+      return const PlanLimitState(tampered: true);
+    }
     try {
       return PlanLimitState.fromJson(json.decode(data) as Map<String, Object?>);
     } catch (_) {
-      return const PlanLimitState();
+      return const PlanLimitState(tampered: true);
     }
   }
 
@@ -117,6 +125,12 @@ class PlanLimitController {
 
   Future<PlanLimitViolation?> check() async {
     final state = await _normalizeDay(await getState());
+    if (state.tampered) {
+      return const PlanLimitViolation(
+        '本地套餐数据异常，请重新导入连接配置',
+        expired: true,
+      );
+    }
     final now = _estimatedNow(state);
     if (state.expire > 0 && now >= state.expire) {
       return const PlanLimitViolation(

@@ -43,7 +43,11 @@ class SubscriptionInfoConverter
   @override
   SubscriptionInfo? fromSql(String? fromDb) {
     if (fromDb == null) return null;
-    return SubscriptionInfo.fromJson(json.decode(fromDb));
+    try {
+      return SubscriptionInfo.fromJson(json.decode(fromDb));
+    } catch (_) {
+      return null;
+    }
   }
 
   @override

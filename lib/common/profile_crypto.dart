@@ -7,8 +7,10 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/services.dart';
 
 const _profileMagic = 'FLCLASH_PROFILE_V1:';
+const _secureDataMagic = 'FLCLASH_SECURE_DATA_V1:';
 const _hardwareChannel = MethodChannel('com.follow/hardware');
 final _profileMagicBytes = ascii.encode(_profileMagic);
+final _secureDataMagicBytes = ascii.encode(_secureDataMagic);
 List<int>? _profileKey;
 
 bool isEncryptedProfileBytes(List<int> bytes) {
@@ -24,6 +26,23 @@ bool isEncryptedProfileBytes(List<int> bytes) {
 }
 
 Future<Uint8List> encryptProfileBytes(Uint8List plainBytes) async {
+  return _encryptBytes(plainBytes, _profileMagicBytes);
+}
+
+Future<Uint8List> encryptSecureDataBytes(Uint8List plainBytes) async {
+  return _encryptBytes(plainBytes, _secureDataMagicBytes);
+}
+
+Future<String> encryptSecureDataString(String plainText) async {
+  return utf8.decode(
+    await encryptSecureDataBytes(Uint8List.fromList(utf8.encode(plainText))),
+  );
+}
+
+Future<Uint8List> _encryptBytes(
+  Uint8List plainBytes,
+  List<int> magicBytes,
+) async {
   final nonce = _randomBytes(16);
   final key = await _getProfileKey();
   final cipherBytes = _xorWithStream(plainBytes, nonce, key);
@@ -35,7 +54,7 @@ Future<Uint8List> encryptProfileBytes(Uint8List plainBytes) async {
     'm': base64.encode(mac),
   });
   return Uint8List.fromList([
-    ..._profileMagicBytes,
+    ...magicBytes,
     ...utf8.encode(base64.encode(utf8.encode(payload))),
   ]);
 }
@@ -44,7 +63,28 @@ Future<Uint8List> decryptProfileBytes(Uint8List bytes) async {
   if (!isEncryptedProfileBytes(bytes)) {
     throw 'Profile data is not encrypted';
   }
-  final payloadBase64 = utf8.decode(bytes.sublist(_profileMagicBytes.length));
+  return _decryptBytes(bytes, _profileMagicBytes);
+}
+
+Future<Uint8List> decryptSecureDataBytes(Uint8List bytes) async {
+  if (!_hasMagic(bytes, _secureDataMagicBytes)) {
+    throw 'Secure data is not encrypted';
+  }
+  return _decryptBytes(bytes, _secureDataMagicBytes);
+}
+
+Future<String> decryptSecureDataString(String data) async {
+  final bytes = await decryptSecureDataBytes(
+    Uint8List.fromList(utf8.encode(data)),
+  );
+  return utf8.decode(bytes);
+}
+
+Future<Uint8List> _decryptBytes(
+  Uint8List bytes,
+  List<int> magicBytes,
+) async {
+  final payloadBase64 = utf8.decode(bytes.sublist(magicBytes.length));
   final payload = json.decode(utf8.decode(base64.decode(payloadBase64)));
   if (payload is! Map || payload['v'] != 1) {
     throw 'Invalid profile data';
@@ -58,6 +98,18 @@ Future<Uint8List> decryptProfileBytes(Uint8List bytes) async {
     throw 'Invalid profile data';
   }
   return _xorWithStream(Uint8List.fromList(cipherBytes), nonce, key);
+}
+
+bool _hasMagic(List<int> bytes, List<int> magicBytes) {
+  if (bytes.length < magicBytes.length) {
+    return false;
+  }
+  for (var i = 0; i < magicBytes.length; i++) {
+    if (bytes[i] != magicBytes[i]) {
+      return false;
+    }
+  }
+  return true;
 }
 
 Future<void> writeEncryptedProfileFile(File file, Uint8List plainBytes) async {
