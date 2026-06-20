@@ -98,7 +98,7 @@ class PlanLimitController {
     if (data == null || data.isEmpty) {
       return const PlanLimitState();
     }
-    if (data == _invalidPlanLimitData) {
+    if (data == invalidPlanLimitData) {
       return const PlanLimitState(tampered: true);
     }
     try {

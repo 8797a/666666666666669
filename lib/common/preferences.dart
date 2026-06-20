@@ -7,7 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'constant.dart';
 import 'profile_crypto.dart';
 
-const _invalidPlanLimitData = '__INVALID_PLAN_LIMIT_DATA__';
+const invalidPlanLimitData = '__INVALID_PLAN_LIMIT_DATA__';
 
 class Preferences {
   static Preferences? _instance;
@@ -102,7 +102,7 @@ class Preferences {
     try {
       return await decryptSecureDataString(data);
     } catch (_) {
-      return _invalidPlanLimitData;
+      return invalidPlanLimitData;
     }
   }
 
