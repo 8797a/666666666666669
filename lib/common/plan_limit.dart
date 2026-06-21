@@ -4,6 +4,8 @@ import 'package:fl_clash/models/models.dart';
 
 import 'preferences.dart';
 
+const int limitedPlanTrafficMultiplier = 3;
+
 class PlanLimitState {
   final String name;
   final int expire;
@@ -152,12 +154,22 @@ class PlanLimitController {
       return check();
     }
     final state = await _normalizeDay(await getState());
+    final chargedBytes = _chargedTrafficBytes(state, bytes);
     final next = state.copyWith(
-      dailyUsed: state.dailyUsed + bytes.round(),
-      totalUsed: state.totalUsed + bytes.round(),
+      dailyUsed: state.dailyUsed + chargedBytes,
+      totalUsed: state.totalUsed + chargedBytes,
     );
     await _save(next);
     return check();
+  }
+
+  int _chargedTrafficBytes(PlanLimitState state, num bytes) {
+    final rawBytes = bytes.round();
+    final hasTrafficLimit = state.dailyTraffic > 0 || state.totalTraffic > 0;
+    if (!hasTrafficLimit) {
+      return rawBytes;
+    }
+    return rawBytes * limitedPlanTrafficMultiplier;
   }
 
   Future<void> _save(PlanLimitState state) async {
