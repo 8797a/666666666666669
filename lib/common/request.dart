@@ -14,19 +14,33 @@ import 'package:flutter/cupertino.dart';
 
 class Request {
   late final Dio dio;
-  late final Dio _clashDio;
+  late final Dio _directDio;
   String? userAgent;
 
   Request() {
-    dio = Dio(BaseOptions(headers: {'User-Agent': browserUa}));
-    _clashDio = Dio();
-    _clashDio.httpClientAdapter = IOHttpClientAdapter(
+    dio = Dio(
+      BaseOptions(
+        headers: {'User-Agent': browserUa},
+        connectTimeout: httpTimeoutDuration,
+        sendTimeout: httpTimeoutDuration,
+        receiveTimeout: httpTimeoutDuration,
+      ),
+    );
+
+    _directDio = Dio(
+      BaseOptions(
+        headers: {'User-Agent': browserUa},
+        connectTimeout: const Duration(seconds: 15),
+        sendTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 30),
+      ),
+    );
+    _directDio.httpClientAdapter = IOHttpClientAdapter(
       createHttpClient: () {
         final client = HttpClient();
-        client.findProxy = (Uri uri) {
-          client.userAgent = appController.ua;
-          return FlClashHttpOverrides.handleFindProxy(uri);
-        };
+        client.userAgent = appController.ua;
+        client.findProxy = (_) => 'DIRECT';
+        client.badCertificateCallback = (_, _, _) => true;
         return client;
       },
     );
@@ -34,10 +48,8 @@ class Request {
 
   Future<Response<Uint8List>> getFileResponseForUrl(String url) async {
     try {
-      // 获取硬件信息
       final hwInfo = await hardwareInfo.getAllHardwareInfo();
-      
-      return await _clashDio.get<Uint8List>(
+      return await _directDio.get<Uint8List>(
         url,
         options: Options(
           responseType: ResponseType.bytes,
@@ -52,130 +64,105 @@ class Request {
       );
     } catch (e) {
       commonPrint.log('getFileResponseForUrl error ${e.toString()}');
-      if (e is DioException) {
-        // 连接错误
-        if (e.type == DioExceptionType.connectionError) {
-          throw '连接错误：无法连接到服务器';
-        }
-        // 连接超时
-        else if (e.type == DioExceptionType.connectionTimeout) {
-          throw '连接超时：服务器响应时间过长';
-        }
-        // 接收超时
-        else if (e.type == DioExceptionType.receiveTimeout) {
-          throw '接收超时：数据接收时间过长';
-        }
-        // 发送超时
-        else if (e.type == DioExceptionType.sendTimeout) {
-          throw '发送超时：数据发送时间过长';
-        }
-        // 未知错误（通常是网络问题）
-        else if (e.type == DioExceptionType.unknown) {
+      _throwNetworkException(e);
+    }
+  }
+
+  Never _throwNetworkException(Object e) {
+    if (e is DioException) {
+      switch (e.type) {
+        case DioExceptionType.connectionError:
+          throw 'Connection error: unable to connect to the server. Check the network or subscription URL.';
+        case DioExceptionType.connectionTimeout:
+          throw 'Connection timeout: the server took too long to respond.';
+        case DioExceptionType.receiveTimeout:
+          throw 'Receive timeout: the server took too long to return data.';
+        case DioExceptionType.sendTimeout:
+          throw 'Send timeout: the request took too long to send.';
+        case DioExceptionType.badCertificate:
+          throw 'Certificate error: invalid server certificate.';
+        case DioExceptionType.cancel:
+          throw 'Request cancelled.';
+        case DioExceptionType.unknown:
           final errorMsg = e.error?.toString() ?? '';
-          // DNS解析失败
-          if (errorMsg.contains('Failed host lookup') || 
+          if (errorMsg.contains('Failed host lookup') ||
               errorMsg.contains('SocketException')) {
-            throw '网络错误：无法解析域名或连接失败，请检查网络连接';
+            throw 'Network error: unable to resolve the host or connect. Check the network connection.';
           }
-          // 服务器提前关闭连接（静默退出）
-          if (errorMsg.contains('Connection closed') || 
+          if (errorMsg.contains('Connection closed') ||
               errorMsg.contains('Connection reset')) {
-            throw '服务器错误：服务暂时不可用';
+            throw 'Server error: the server is temporarily unavailable.';
           }
           throw appLocalizations.unknownNetworkError;
-        }
-        // 错误响应
-        else if (e.type == DioExceptionType.badResponse) {
+        case DioExceptionType.badResponse:
+          final message = _parseBadResponseMessage(e.response);
+          if (message.isNotEmpty) {
+            throw message;
+          }
           final statusCode = e.response?.statusCode;
-          final responseData = e.response?.data;
-          
-          String errorMessage = '';
-          if (responseData != null) {
-            if (responseData is String) {
-              try {
-                final jsonData = json.decode(responseData) as Map<String, dynamic>;
-                if (jsonData.containsKey('error_code')) {
-                  errorMessage = _getErrorMessage(jsonData);
-                } else {
-                  errorMessage = responseData;
-                }
-              } catch (_) {
-                errorMessage = responseData;
-              }
-            } else if (responseData is List<int>) {
-              try {
-                final text = String.fromCharCodes(responseData);
-                try {
-                  final jsonData = json.decode(text) as Map<String, dynamic>;
-                  if (jsonData.containsKey('error_code')) {
-                    errorMessage = _getErrorMessage(jsonData);
-                  } else {
-                    errorMessage = text;
-                  }
-                } catch (_) {
-                  errorMessage = text;
-                }
-              } catch (_) {}
-            } else if (responseData is Map) {
-              try {
-                final Map<String, dynamic> jsonData = Map<String, dynamic>.from(responseData.cast<String, dynamic>());
-                if (jsonData.containsKey('error_code')) {
-                  errorMessage = _getErrorMessage(jsonData);
-                }
-              } catch (_) {}
-            }
-          }
-          
-          if (errorMessage.isNotEmpty) {
-            throw errorMessage;
-          }
-          
           if (statusCode != null) {
-            throw '服务器错误：HTTP $statusCode';
+            throw 'Server error: HTTP $statusCode';
           }
           throw appLocalizations.networkException;
-        }
-        // 请求取消
-        else if (e.type == DioExceptionType.cancel) {
-          throw '请求已取消';
-        }
-        // 证书错误
-        else if (e.type == DioExceptionType.badCertificate) {
-          throw '证书错误：服务器证书无效';
-        }
-        rethrow;
       }
-      throw appLocalizations.unknownNetworkError;
     }
+    throw appLocalizations.unknownNetworkError;
+  }
+
+  String _parseBadResponseMessage(Response<dynamic>? response) {
+    final responseData = response?.data;
+    if (responseData == null) {
+      return '';
+    }
+    try {
+      if (responseData is String) {
+        return _parseErrorText(responseData);
+      }
+      if (responseData is List<int>) {
+        return _parseErrorText(utf8.decode(responseData, allowMalformed: true));
+      }
+      if (responseData is Map) {
+        return _getErrorMessage(Map<String, dynamic>.from(responseData));
+      }
+    } catch (_) {}
+    return '';
+  }
+
+  String _parseErrorText(String text) {
+    try {
+      final jsonData = json.decode(text);
+      if (jsonData is Map) {
+        final message = _getErrorMessage(Map<String, dynamic>.from(jsonData));
+        if (message.isNotEmpty) {
+          return message;
+        }
+      }
+    } catch (_) {}
+    return text;
   }
 
   String _getErrorMessage(Map<String, dynamic> errorData) {
     final errorCode = errorData['error_code'];
-    
     switch (errorCode) {
       case 'CLIENT_MARKER_INVALID':
-        return 'Your client version is not supported';
-
+        return 'The current client version is not supported.';
       case 'DEVICE_MISMATCH':
         final bindTime = errorData['bind_time'] ?? '';
-        return '该平台已绑定其他设备：请前往站点设备管理页面解绑（绑定时间：$bindTime）';
-      
+        return 'This subscription is bound to another device. Unbind it in the device management page. Bind time: $bindTime';
       case 'IP_MISMATCH':
         final boundIp = errorData['bound_ip'] ?? '';
         final currentIp = errorData['current_ip'] ?? '';
-        return 'IP地址不匹配，请前往站点设备管理页面解绑，绑定IP：$boundIp，当前IP：$currentIp';
-      
+        return 'IP address mismatch. Unbind it in the device management page. Bound IP: $boundIp, current IP: $currentIp';
       default:
-        return '未知错误';
+        return '';
     }
   }
 
   Future<Response<String>> getTextResponseForUrl(String url) async {
-    final response = await _clashDio.get<String>(
+    return await _directDio.get<String>(
       url,
       options: Options(responseType: ResponseType.plain),
     );
-    return response;
   }
 
   Future<MemoryImage?> getImage(String url) async {
@@ -220,42 +207,52 @@ class Request {
   };
 
   Future<Result<IpInfo?>> checkIp({CancelToken? cancelToken}) async {
-    var failureCount = 0;
     final token = cancelToken ?? CancelToken();
-    final futures = _ipInfoSources.entries.map((source) async {
-      final Completer<Result<IpInfo?>> completer = Completer();
-      handleFailRes() {
-        if (!completer.isCompleted && failureCount == _ipInfoSources.length) {
-          completer.complete(Result.success(null));
-        }
-      }
+    final completer = Completer<Result<IpInfo?>>();
+    var pendingCount = _ipInfoSources.length;
 
-      final future = dio
-          .get<Map<String, dynamic>>(
-            source.key,
-            cancelToken: token,
-            options: Options(responseType: ResponseType.json),
-          )
-          .timeout(const Duration(seconds: 10));
-      future
-          .then((res) {
-            if (res.statusCode == HttpStatus.ok && res.data != null) {
-              completer.complete(Result.success(source.value(res.data!)));
-              return;
-            }
-            failureCount++;
-            handleFailRes();
-          })
-          .catchError((e) {
-            failureCount++;
-            if (e is DioException && e.type == DioExceptionType.cancel) {
-              completer.complete(Result.error('cancelled'));
-            }
-            handleFailRes();
-          });
-      return completer.future;
-    });
-    final res = await Future.any(futures);
+    void finish(Result<IpInfo?> result) {
+      if (!completer.isCompleted) {
+        completer.complete(result);
+      }
+    }
+
+    void finishOne() {
+      pendingCount--;
+      if (pendingCount <= 0) {
+        finish(Result.success(null));
+      }
+    }
+
+    for (final source in _ipInfoSources.entries) {
+      unawaited(() async {
+        try {
+          final res = await dio
+              .get<Map<String, dynamic>>(
+                source.key,
+                cancelToken: token,
+                options: Options(responseType: ResponseType.json),
+              )
+              .timeout(const Duration(seconds: 8));
+          if (res.statusCode == HttpStatus.ok && res.data != null) {
+            finish(Result.success(source.value(res.data!)));
+            return;
+          }
+        } catch (e) {
+          if (e is DioException && e.type == DioExceptionType.cancel) {
+            finish(Result.error('cancelled'));
+            return;
+          }
+        } finally {
+          finishOne();
+        }
+      }());
+    }
+
+    final res = await completer.future.timeout(
+      const Duration(seconds: 12),
+      onTimeout: () => Result.success(null),
+    );
     token.cancel();
     return res;
   }

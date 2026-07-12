@@ -132,14 +132,18 @@ extension InitControllerExt on AppController {
     commonPrint.log('init status');
     if (system.isAndroid) {
       await globalState.updateStartTime();
+      if (globalState.isStart == true || _ref.read(isStartProvider)) {
+        await updateStatus(false);
+      } else {
+        _ref.read(runTimeProvider.notifier).value = null;
+      }
+      await applyProfile(force: true);
+      return;
     }
     final autoRun = _ref.read(appSettingProvider).autoRun;
     if (autoRun == true) {
       await updateStatus(true, isInit: true);
     } else {
-      if (globalState.isStart == true) {
-        await globalState.handleStop();
-      }
       await applyProfile(force: true);
     }
   }
