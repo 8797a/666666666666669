@@ -90,7 +90,7 @@ class CoreController {
     required String config,
     VoidCallback? preloadInvoke,
   }) async {
-    final res = await _interface.setupConfig(params, config: config);
+    final res = _interface.setupConfig(params, config: config);
     if (preloadInvoke != null) {
       preloadInvoke();
     }

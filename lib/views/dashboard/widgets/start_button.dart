@@ -72,7 +72,17 @@ class _StartButtonState extends ConsumerState<StartButton>
       profilesProvider.select((state) => state.isNotEmpty),
     );
     if (!hasProfile) {
-      return Container();
+      return FloatingActionButton(
+        heroTag: null,
+        tooltip: appLocalizations.nullProfileDesc,
+        backgroundColor: context.colorScheme.surfaceContainerHighest,
+        foregroundColor: context.colorScheme.onSurfaceVariant,
+        onPressed: () {
+          appController.toProfiles();
+          globalState.showNotifier(appLocalizations.nullProfileDesc);
+        },
+        child: const Icon(Icons.play_arrow),
+      );
     }
     return Theme(
       data: Theme.of(context).copyWith(

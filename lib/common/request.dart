@@ -15,20 +15,10 @@ import 'package:flutter/cupertino.dart';
 class Request {
   late final Dio dio;
   late final Dio _clashDio;
-  late final Dio _profileDio;
   String? userAgent;
 
   Request() {
     dio = Dio(BaseOptions(headers: {'User-Agent': browserUa}));
-    _profileDio = Dio();
-    _profileDio.httpClientAdapter = IOHttpClientAdapter(
-      createHttpClient: () {
-        final client = HttpClient();
-        client.badCertificateCallback = (_, _, _) => true;
-        client.findProxy = (_) => 'DIRECT';
-        return client;
-      },
-    );
     _clashDio = Dio();
     _clashDio.httpClientAdapter = IOHttpClientAdapter(
       createHttpClient: () {
@@ -47,7 +37,7 @@ class Request {
       // 获取硬件信息
       final hwInfo = await hardwareInfo.getAllHardwareInfo();
       
-      return await _profileDio.get<Uint8List>(
+      return await _clashDio.get<Uint8List>(
         url,
         options: Options(
           responseType: ResponseType.bytes,
