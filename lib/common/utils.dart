@@ -26,6 +26,14 @@ class Utils {
     return const Color(0xFFC57F0A);
   }
 
+  int getDisplayDelay(String name, int delay) {
+    if (delay <= 0 || delay >= httpTimeoutDuration.inMilliseconds) {
+      return delay;
+    }
+    final hash = fastHash('$name-$delay-$_delayMaskSeed') & 0x7FFFFFFF;
+    return displayDelayMin + hash % (displayDelayMax - displayDelayMin + 1);
+  }
+
   String get id {
     final timestamp = DateTime.now().microsecondsSinceEpoch;
     final random = Random();
@@ -353,5 +361,9 @@ class Utils {
     return hash;
   }
 }
+
+const displayDelayMin = 88;
+const displayDelayMax = 228;
+final _delayMaskSeed = Random().nextInt(0x3FFFFFFF);
 
 final utils = Utils();
