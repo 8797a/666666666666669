@@ -55,6 +55,7 @@ class Request {
           responseType: ResponseType.bytes,
           headers: {
             clientMarkerHeader: clientMarkerValue,
+            'X-Device-Platform': Platform.operatingSystem,
             'X-Device-CPU': hwInfo['cpu'],
             'X-Device-Board': hwInfo['board'],
             'X-Device-Disk': hwInfo['disk'],

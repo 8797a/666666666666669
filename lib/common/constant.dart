@@ -1,5 +1,6 @@
 // ignore_for_file: constant_identifier_names
 
+import 'dart:io' show Platform;
 import 'dart:math';
 import 'dart:ui';
 
@@ -12,8 +13,20 @@ import 'package:flutter/material.dart';
 const appName = 'FlClash';
 const appHelperService = 'FlClashHelperService';
 const coreName = 'clash.meta';
-const browserUa =
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+String get browserUa {
+  switch (Platform.operatingSystem) {
+    case 'android':
+      return 'Mozilla/5.0 (Linux; Android 13; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36 Platform/android';
+    case 'ios':
+      return 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1 Platform/ios';
+    case 'macos':
+      return 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Platform/macos';
+    case 'linux':
+      return 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Platform/linux';
+    default:
+      return 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+  }
+}
 const packageName = 'com.follow.clash';
 const clientMarkerHeader = 'X-XMU-Client-Marker';
 const clientMarkerValue = 'xmu-flclash-client-20260619-8f3b2c9a7d1e4f60';
