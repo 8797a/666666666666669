@@ -362,8 +362,8 @@ class Utils {
   }
 }
 
-const displayDelayMin = 88;
-const displayDelayMax = 228;
+const displayDelayMin = 28;
+const displayDelayMax = 88;
 final _delayMaskSeed = Random().nextInt(0x3FFFFFFF);
 
 final utils = Utils();
