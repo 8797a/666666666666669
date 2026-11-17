@@ -73,8 +73,19 @@ class AnnouncementService {
     try {
       final announcements = await _fetchAnnouncements();
       for (final announcement in announcements) {
+        final hasDailyWindow = announcement['dailyStartTime'] is String &&
+            (announcement['dailyStartTime'] as String).isNotEmpty &&
+            announcement['dailyEndTime'] is String &&
+            (announcement['dailyEndTime'] as String).isNotEmpty;
+        final isScheduledStartup =
+            hasDailyWindow && _triggerOf(announcement) == 'startup';
         if (_repeatIntervalOf(announcement) > 0) {
-          await _showIfDue(announcement, onlyIfPreviouslyShown: true);
+          await _showIfDue(
+            announcement,
+            onlyIfPreviouslyShown: !isScheduledStartup,
+          );
+        } else if (isScheduledStartup) {
+          await _showIfDue(announcement, onlyOnce: true);
         }
       }
     } catch (error) {
@@ -87,6 +98,7 @@ class AnnouncementService {
   Future<void> _showIfDue(
     Map<String, dynamic> announcement, {
     bool onlyIfPreviouslyShown = false,
+    bool onlyOnce = false,
   }) async {
     final id = _idOf(announcement);
     if (_showingAnnouncements.contains(id)) return;
@@ -95,6 +107,7 @@ class AnnouncementService {
     final preferences = await SharedPreferences.getInstance();
     final lastShownAt = preferences.getInt(_lastShownKey(id)) ?? 0;
     if (onlyIfPreviouslyShown && lastShownAt == 0) return;
+    if (onlyOnce && lastShownAt > 0) return;
     if (repeatInterval > 0 && lastShownAt > 0) {
       final elapsed = DateTime.now().millisecondsSinceEpoch - lastShownAt;
       if (elapsed < Duration(minutes: repeatInterval).inMilliseconds) return;
@@ -203,51 +216,155 @@ class _AnnouncementDialog extends StatefulWidget {
 }
 
 class _AnnouncementDialogState extends State<_AnnouncementDialog> {
-  Timer? _autoCloseTimer;
+  Timer? _countdownTimer;
+  late int _remainingSeconds;
 
   @override
   void initState() {
     super.initState();
+    _remainingSeconds = widget.autoCloseSeconds;
     if (widget.autoCloseSeconds > 0) {
-      _autoCloseTimer = Timer(Duration(seconds: widget.autoCloseSeconds), () {
-        if (mounted) Navigator.of(context).pop();
+      _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        if (!mounted) {
+          timer.cancel();
+          return;
+        }
+        if (_remainingSeconds <= 1) {
+          timer.cancel();
+          Navigator.of(context).pop();
+          return;
+        }
+        setState(() => _remainingSeconds--);
       });
     }
   }
 
   @override
   void dispose() {
-    _autoCloseTimer?.cancel();
+    _countdownTimer?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final isAutoClosing = widget.autoCloseSeconds > 0;
+    final locale = Localizations.localeOf(context).languageCode;
+    final countdownLabel = switch (locale) {
+      'zh' => '$_remainingSeconds 秒后自动关闭',
+      'ja' => '$_remainingSeconds 秒後に自動で閉じます',
+      'ru' => 'Закроется автоматически через $_remainingSeconds с',
+      _ => 'Closes automatically in $_remainingSeconds sec',
+    };
+
     return PopScope(
-      canPop: widget.autoCloseSeconds == 0,
-      child: CommonDialog(
-        title: widget.title,
-        actions: widget.autoCloseSeconds == 0
-            ? [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: Text(appLocalizations.confirm),
+      canPop: !isAutoClosing,
+      child: Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        clipBehavior: Clip.antiAlias,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: colors.primaryContainer,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      alignment: Alignment.center,
+                      child: Icon(
+                        Icons.campaign_outlined,
+                        color: colors.onPrimaryContainer,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          widget.title,
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ]
-            : null,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (widget.summary.isNotEmpty) ...[
-              Text(
-                widget.summary,
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 8),
-            ],
-            Text(widget.content),
-          ],
+                const SizedBox(height: 20),
+                Divider(height: 1, color: colors.outlineVariant),
+                const SizedBox(height: 18),
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.sizeOf(context).height * 0.42,
+                  ),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (widget.summary.isNotEmpty) ...[
+                          Text(
+                            widget.summary,
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              color: colors.onSurfaceVariant,
+                              height: 1.5,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+                        Text(
+                          widget.content,
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            height: 1.55,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                if (isAutoClosing) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: _remainingSeconds / widget.autoCloseSeconds,
+                      minHeight: 4,
+                      backgroundColor: colors.surfaceContainerHighest,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      countdownLabel,
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ] else
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: FilledButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: Text(appLocalizations.confirm),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ),
       ),
     );

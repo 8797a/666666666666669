@@ -386,10 +386,12 @@ extension ProfilesControllerExt on AppController {
     await coreController.deleteFile(providersDirPath);
   }
 
-  Future<void> clearCurrentExpiredProfile() async {
-    final profileId = _ref.read(currentProfileIdProvider);
-    if (profileId == null) {
-      return;
+  Future<void> clearCurrentExpiredProfile(int profileId) async {
+    if (_ref.read(currentProfileIdProvider) != profileId) return;
+    try {
+      await planLimitController.clearProfile(profileId);
+    } catch (error) {
+      commonPrint.log('clear expired profile limit state failed: $error');
     }
     await clearEffect(profileId);
     _ref.read(profilesProvider.notifier).del(profileId);
@@ -562,10 +564,17 @@ extension SetupControllerExt on AppController {
 
   Future<void> updateStatus(bool isStart, {bool isInit = false}) async {
     if (isStart) {
-      final violation = await planLimitController.check();
+      final profileId = _ref.read(currentProfileIdProvider);
+      final currentProfile = _ref.read(currentProfileProvider);
+      final violation = profileId == null
+          ? null
+          : await planLimitController.check(
+              profileId,
+              subscriptionInfo: currentProfile?.subscriptionInfo,
+            );
       if (violation != null) {
-        if (violation.expired) {
-          await clearCurrentExpiredProfile();
+        if (violation.expired && profileId != null) {
+          await clearCurrentExpiredProfile(profileId);
         }
         globalState.showNotifier(violation.message);
         return;
@@ -1213,11 +1222,19 @@ extension CommonControllerExt on AppController {
     final currentTotal = totalTraffic.up + totalTraffic.down;
     final delta = currentTotal - _lastPlanTrafficTotal;
     _lastPlanTrafficTotal = currentTotal;
-    final violation = await planLimitController.addTraffic(delta);
-    final planState = await planLimitController.getState();
     final currentProfile = _ref.read(currentProfileProvider);
-    final currentSubscriptionInfo = currentProfile?.subscriptionInfo;
-    if (currentProfile != null && currentSubscriptionInfo != null) {
+    if (currentProfile == null) return;
+    final currentSubscriptionInfo = currentProfile.subscriptionInfo;
+    final violation = await planLimitController.addTraffic(
+      currentProfile.id,
+      delta,
+      subscriptionInfo: currentSubscriptionInfo,
+    );
+    final planState = await planLimitController.getState(
+      currentProfile.id,
+      subscriptionInfo: currentSubscriptionInfo,
+    );
+    if (currentSubscriptionInfo != null) {
       _ref.read(profilesProvider.notifier).put(
         currentProfile.copyWith(
           subscriptionInfo: currentSubscriptionInfo.copyWith(
@@ -1236,11 +1253,13 @@ extension CommonControllerExt on AppController {
         ),
       );
     }
-    if (violation != null && _ref.read(isStartProvider)) {
+    if (violation != null &&
+        _ref.read(isStartProvider) &&
+        _ref.read(currentProfileIdProvider) == currentProfile.id) {
       globalState.showNotifier(violation.message);
       await updateStatus(false);
       if (violation.expired) {
-        await clearCurrentExpiredProfile();
+        await clearCurrentExpiredProfile(currentProfile.id);
       }
     }
   }

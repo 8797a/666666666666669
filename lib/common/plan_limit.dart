@@ -95,72 +95,114 @@ class PlanLimitViolation {
 }
 
 class PlanLimitController {
-  Future<PlanLimitState> getState() async {
-    final data = await preferences.getPlanLimitJson();
-    if (data == null || data.isEmpty) {
-      return const PlanLimitState();
+  Future<PlanLimitState> getState(
+    int profileId, {
+    SubscriptionInfo? subscriptionInfo,
+  }) async {
+    final data = await preferences.getPlanLimitJson(profileId: profileId);
+    if (data != null && data.isNotEmpty) {
+      return _decodeState(data) ?? const PlanLimitState(tampered: true);
     }
-    if (data == invalidPlanLimitData) {
-      return const PlanLimitState(tampered: true);
+
+    final legacyData = await preferences.getPlanLimitJson();
+    if (legacyData == invalidPlanLimitData) {
+      await preferences.removePlanLimitJson();
+      return _stateFromSubscriptionInfo(subscriptionInfo);
     }
-    try {
-      return PlanLimitState.fromJson(json.decode(data) as Map<String, Object?>);
-    } catch (_) {
-      return const PlanLimitState(tampered: true);
+    if (legacyData != null && legacyData.isNotEmpty) {
+      final legacyState = _decodeState(legacyData);
+      if (legacyState == null) {
+        await preferences.removePlanLimitJson();
+      } else if (_matchesSubscription(legacyState, subscriptionInfo)) {
+        await _save(legacyState, profileId);
+        await preferences.removePlanLimitJson();
+        return legacyState;
+      }
     }
+
+    return _stateFromSubscriptionInfo(subscriptionInfo);
   }
 
-  Future<void> saveFromSubscriptionInfo(SubscriptionInfo info) async {
+  Future<void> saveFromSubscriptionInfo(
+    SubscriptionInfo info, {
+    required int profileId,
+  }) async {
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    final state = await getState();
+    var state = await getState(profileId, subscriptionInfo: info);
+    if (state.tampered) {
+      state = _stateFromSubscriptionInfo(info);
+    }
+    final serverTime = info.serverTime > 0 ? info.serverTime : now;
+    final dayKey = _currentDayKey(serverTime, now);
     final next = state.copyWith(
       name: info.planName,
       expire: info.expire,
       dailyTraffic: info.dailyTraffic,
       totalTraffic: info.total,
-      serverTime: info.serverTime > 0 ? info.serverTime : now,
+      serverTime: serverTime,
       receivedAt: now,
-      dayKey: _currentDayKey(info.serverTime > 0 ? info.serverTime : now, now),
+      dailyUsed: state.dayKey == dayKey ? state.dailyUsed : 0,
+      dayKey: dayKey,
     );
-    await _save(next);
+    await _save(next, profileId);
   }
 
-  Future<PlanLimitViolation?> check() async {
-    final state = await _normalizeDay(await getState());
+  Future<PlanLimitViolation?> check(
+    int profileId, {
+    SubscriptionInfo? subscriptionInfo,
+  }) async {
+    final state = await getState(
+      profileId,
+      subscriptionInfo: subscriptionInfo,
+    );
     if (state.tampered) {
       return const PlanLimitViolation(
         '本地套餐数据异常，请重新导入连接配置',
-        expired: true,
       );
     }
-    final now = _estimatedNow(state);
-    if (state.expire > 0 && now >= state.expire) {
+    final normalized = await _normalizeDay(state, profileId);
+    final now = _estimatedNow(normalized);
+    if (normalized.expire > 0 && now >= normalized.expire) {
       return const PlanLimitViolation(
         '套餐已到期，请更新配置或重新购买套餐',
         expired: true,
       );
     }
-    if (state.dailyTraffic > 0 && state.dailyUsed >= state.dailyTraffic) {
+    if (normalized.dailyTraffic > 0 &&
+        normalized.dailyUsed >= normalized.dailyTraffic) {
       return const PlanLimitViolation('今日流量已用完，请明天再使用');
     }
-    if (state.totalTraffic > 0 && state.totalUsed >= state.totalTraffic) {
+    if (normalized.totalTraffic > 0 &&
+        normalized.totalUsed >= normalized.totalTraffic) {
       return const PlanLimitViolation('套餐流量已用完，请重新购买套餐');
     }
     return null;
   }
 
-  Future<PlanLimitViolation?> addTraffic(num bytes) async {
+  Future<PlanLimitViolation?> addTraffic(
+    int profileId,
+    num bytes, {
+    SubscriptionInfo? subscriptionInfo,
+  }) async {
     if (bytes <= 0) {
-      return check();
+      return check(profileId, subscriptionInfo: subscriptionInfo);
     }
-    final state = await _normalizeDay(await getState());
+    final state = await _normalizeDay(
+      await getState(profileId, subscriptionInfo: subscriptionInfo),
+      profileId,
+    );
+    if (state.tampered) {
+      return const PlanLimitViolation(
+        '本地套餐数据异常，请重新导入连接配置',
+      );
+    }
     final chargedBytes = _chargedTrafficBytes(state, bytes);
     final next = state.copyWith(
       dailyUsed: state.dailyUsed + chargedBytes,
       totalUsed: state.totalUsed + chargedBytes,
     );
-    await _save(next);
-    return check();
+    await _save(next, profileId);
+    return check(profileId, subscriptionInfo: subscriptionInfo);
   }
 
   int _chargedTrafficBytes(PlanLimitState state, num bytes) {
@@ -172,17 +214,67 @@ class PlanLimitController {
     return rawBytes * limitedPlanTrafficMultiplier;
   }
 
-  Future<void> _save(PlanLimitState state) async {
-    await preferences.savePlanLimitJson(json.encode(state.toJson()));
+  Future<void> clearProfile(int profileId) async {
+    await preferences.removePlanLimitJson(profileId: profileId);
   }
 
-  Future<PlanLimitState> _normalizeDay(PlanLimitState state) async {
+  PlanLimitState _stateFromSubscriptionInfo(SubscriptionInfo? info) {
+    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final serverTime = (info?.serverTime ?? 0) > 0 ? info!.serverTime : now;
+    return PlanLimitState(
+      name: info?.planName ?? '',
+      expire: info?.expire ?? 0,
+      dailyTraffic: info?.dailyTraffic ?? 0,
+      totalTraffic: info?.total ?? 0,
+      serverTime: serverTime,
+      receivedAt: now,
+      dayKey: _currentDayKey(serverTime, now),
+    );
+  }
+
+  bool _matchesSubscription(
+    PlanLimitState state,
+    SubscriptionInfo? info,
+  ) {
+    if (info == null || state.tampered) return false;
+    final hasLimits = info.expire > 0 ||
+        info.dailyTraffic > 0 ||
+        info.total > 0 ||
+        info.planName.isNotEmpty;
+    return hasLimits &&
+        state.name == info.planName &&
+        state.expire == info.expire &&
+        state.dailyTraffic == info.dailyTraffic &&
+        state.totalTraffic == info.total;
+  }
+
+  PlanLimitState? _decodeState(String data) {
+    if (data == invalidPlanLimitData) return null;
+    try {
+      return PlanLimitState.fromJson(json.decode(data) as Map<String, Object?>);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _save(PlanLimitState state, int profileId) async {
+    await preferences.savePlanLimitJson(
+      json.encode(state.toJson()),
+      profileId: profileId,
+    );
+  }
+
+  Future<PlanLimitState> _normalizeDay(
+    PlanLimitState state,
+    int profileId,
+  ) async {
+    if (state.tampered) return state;
     final dayKey = _currentDayKey(state.serverTime, state.receivedAt);
     if (state.dayKey == dayKey) {
       return state;
     }
     final next = state.copyWith(dayKey: dayKey, dailyUsed: 0);
-    await _save(next);
+    await _save(next, profileId);
     return next;
   }
 

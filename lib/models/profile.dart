@@ -241,7 +241,10 @@ extension ProfileExtension on Profile {
       totalTraffic: response.headers.value('x-plan-total-traffic'),
       serverTime: response.headers.value('x-plan-server-time'),
     );
-    await planLimitController.saveFromSubscriptionInfo(subscriptionInfo);
+    await planLimitController.saveFromSubscriptionInfo(
+      subscriptionInfo,
+      profileId: id,
+    );
     return await copyWith(
       label: label.takeFirstValid([
         utils.getFileNameForDisposition(disposition),

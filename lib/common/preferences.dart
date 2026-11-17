@@ -93,9 +93,10 @@ class Preferences {
     return preferences?.setString(configKey, json.encode(config)) ?? false;
   }
 
-  Future<String?> getPlanLimitJson() async {
+  Future<String?> getPlanLimitJson({int? profileId}) async {
     final preferences = await sharedPreferencesCompleter.future;
-    final data = preferences?.getString('planLimit');
+    final key = profileId == null ? 'planLimit' : 'planLimit_$profileId';
+    final data = preferences?.getString(key);
     if (data == null || data.isEmpty) {
       return data;
     }
@@ -106,9 +107,16 @@ class Preferences {
     }
   }
 
-  Future<void> savePlanLimitJson(String data) async {
+  Future<void> savePlanLimitJson(String data, {int? profileId}) async {
     final preferences = await sharedPreferencesCompleter.future;
-    await preferences?.setString('planLimit', await encryptSecureDataString(data));
+    final key = profileId == null ? 'planLimit' : 'planLimit_$profileId';
+    await preferences?.setString(key, await encryptSecureDataString(data));
+  }
+
+  Future<void> removePlanLimitJson({int? profileId}) async {
+    final preferences = await sharedPreferencesCompleter.future;
+    final key = profileId == null ? 'planLimit' : 'planLimit_$profileId';
+    await preferences?.remove(key);
   }
 
   Future<bool> getLoginState() async {
