@@ -1,3 +1,4 @@
+import 'package:fl_clash/common/announcement.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/controller.dart';
 import 'package:fl_clash/enum/enum.dart';
@@ -19,6 +20,7 @@ class _StartButtonState extends ConsumerState<StartButton>
   AnimationController? _controller;
   late Animation<double> _animation;
   bool isStart = false;
+  bool _isHandlingStart = false;
 
   @override
   void initState() {
@@ -48,12 +50,23 @@ class _StartButtonState extends ConsumerState<StartButton>
     super.dispose();
   }
 
-  void handleSwitchStart() {
-    isStart = !isStart;
-    updateController();
-    debouncer.call(FunctionTag.updateStatus, () {
-      appController.updateStatus(isStart, isInit: !ref.read(initProvider));
-    }, duration: commonDuration);
+  Future<void> handleSwitchStart() async {
+    if (_isHandlingStart) return;
+    _isHandlingStart = true;
+    final shouldStart = !isStart;
+    try {
+      if (shouldStart) {
+        await announcementService.showForTrigger('connect');
+      }
+      if (!mounted || (shouldStart && ref.read(isStartProvider))) return;
+      isStart = !isStart;
+      updateController();
+      debouncer.call(FunctionTag.updateStatus, () {
+        appController.updateStatus(isStart, isInit: !ref.read(initProvider));
+      }, duration: commonDuration);
+    } finally {
+      _isHandlingStart = false;
+    }
   }
 
   void updateController() {

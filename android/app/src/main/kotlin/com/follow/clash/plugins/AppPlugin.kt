@@ -3,12 +3,17 @@ package com.follow.clash.plugins
 import android.Manifest
 import android.app.Activity
 import android.app.ActivityManager
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.ComponentInfo
 import android.content.pm.PackageManager
 import android.net.VpnService
 import android.os.Build
+import androidx.core.app.NotificationCompat
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.ContextCompat.getSystemService
@@ -119,6 +124,16 @@ class AppPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, ActivityAware 
 
     override fun onMethodCall(call: MethodCall, result: Result) {
         when (call.method) {
+            "requestNotificationsPermission" -> {
+                requestNotificationsPermission {
+                    result.success(hasNotificationPermission())
+                }
+            }
+
+            "showAnnouncementNotification" -> {
+                showAnnouncementNotification(call, result)
+            }
+
             "moveTaskToBack" -> {
                 activityRef?.get()?.moveTaskToBack(true)
                 result.success(true)
@@ -160,6 +175,80 @@ class AppPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, ActivityAware 
             else -> {
                 result.notImplemented()
             }
+        }
+    }
+
+    private fun hasNotificationPermission(): Boolean {
+        return Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            ContextCompat.checkSelfPermission(
+                GlobalState.application,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun showAnnouncementNotification(call: MethodCall, result: Result) {
+        if (!hasNotificationPermission()) {
+            result.success(false)
+            return
+        }
+
+        val context = GlobalState.application
+        val title = call.argument<String>("title") ?: run {
+            result.success(false)
+            return
+        }
+        val summary = call.argument<String>("summary").orEmpty()
+        val content = call.argument<String>("content").orEmpty()
+        val body = listOf(summary, content).filter { it.isNotBlank() }.joinToString("\n\n")
+        val autoCloseSeconds = (call.argument<Int>("autoCloseSeconds") ?: 0).coerceIn(0, 3600)
+        val notificationManager =
+            context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val channelId = "announcement_alerts"
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+            notificationManager.getNotificationChannel(channelId) == null
+        ) {
+            notificationManager.createNotificationChannel(
+                NotificationChannel(
+                    channelId,
+                    "公告提醒",
+                    NotificationManager.IMPORTANCE_HIGH
+                ).apply {
+                    description = "公告中心发布的提醒"
+                }
+            )
+        }
+
+        val notificationId = call.argument<String>("id")?.hashCode() ?: title.hashCode()
+        val openAppIntent = Intent().setComponent(Components.MAIN_ACTIVITY)
+        val contentIntent = PendingIntent.getActivity(
+            context,
+            notificationId,
+            openAppIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val notification = NotificationCompat.Builder(context, channelId)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle(title)
+            .setContentText(summary.ifBlank { content })
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setContentIntent(contentIntent)
+            .setAutoCancel(autoCloseSeconds == 0)
+            .setOngoing(autoCloseSeconds > 0)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+            .apply {
+                if (autoCloseSeconds > 0) {
+                    setTimeoutAfter(autoCloseSeconds * 1000L)
+                }
+            }
+            .build()
+
+        try {
+            notificationManager.notify(notificationId, notification)
+            result.success(true)
+        } catch (_: SecurityException) {
+            result.success(false)
         }
     }
 

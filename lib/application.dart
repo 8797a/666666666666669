@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:fl_clash/common/announcement.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/core/core.dart';
 import 'package:fl_clash/l10n/l10n.dart';
@@ -51,6 +52,16 @@ class ApplicationState extends ConsumerState<Application> {
       final currentContext = globalState.navigatorKey.currentContext;
       if (currentContext != null) {
         await appController.attach(currentContext, ref);
+        if (system.isAndroid &&
+            await app?.requestNotificationsPermission() != true) {
+          await system.exit();
+          return;
+        }
+        final silentLaunch = ref.read(appSettingProvider).silentLaunch;
+        if (!silentLaunch || system.isAndroid) {
+          await announcementService.showForTrigger('startup');
+          announcementService.startRepeating();
+        }
       } else {
         exit(0);
       }
@@ -164,6 +175,7 @@ class ApplicationState extends ConsumerState<Application> {
 
   @override
   Future<void> dispose() async {
+    announcementService.dispose();
     linkManager.destroy();
     _autoUpdateProfilesTaskTimer?.cancel();
     await coreController.destroy();

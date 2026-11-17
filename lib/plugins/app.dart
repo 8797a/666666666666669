@@ -58,6 +58,28 @@ class App {
     );
   }
 
+  Future<bool> showAnnouncementNotification({
+    required String id,
+    required String title,
+    required String summary,
+    required String content,
+    required int autoCloseSeconds,
+  }) async {
+    final hasPermission = await requestNotificationsPermission();
+    if (hasPermission != true) return false;
+    return await methodChannel.invokeMethod<bool>(
+          'showAnnouncementNotification',
+          {
+            'id': id,
+            'title': title,
+            'summary': summary,
+            'content': content,
+            'autoCloseSeconds': autoCloseSeconds,
+          },
+        ) ??
+        false;
+  }
+
   Future<bool> openFile(String path) async {
     return await methodChannel.invokeMethod<bool>('openFile', {'path': path}) ??
         false;
