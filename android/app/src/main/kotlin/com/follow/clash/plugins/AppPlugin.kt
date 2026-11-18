@@ -34,6 +34,7 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
+import io.flutter.embedding.engine.plugins.activity.NewIntentListener
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.Result
@@ -46,11 +47,18 @@ import java.io.File
 import java.lang.ref.WeakReference
 import java.util.zip.ZipFile
 
-class AppPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, ActivityAware {
+class AppPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, ActivityAware,
+    NewIntentListener {
 
     companion object {
         const val VPN_PERMISSION_REQUEST_CODE = 1001
         const val NOTIFICATION_PERMISSION_REQUEST_CODE = 1002
+        private const val EXTRA_ANNOUNCEMENT_ID = "announcement_id"
+        private const val EXTRA_ANNOUNCEMENT_TITLE = "announcement_title"
+        private const val EXTRA_ANNOUNCEMENT_SUMMARY = "announcement_summary"
+        private const val EXTRA_ANNOUNCEMENT_CONTENT = "announcement_content"
+        private const val EXTRA_ANNOUNCEMENT_AUTO_CLOSE = "announcement_auto_close_seconds"
+        private const val EXTRA_NOTIFICATION_ID = "announcement_notification_id"
     }
 
     private var activityRef: WeakReference<Activity>? = null
@@ -62,6 +70,8 @@ class AppPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, ActivityAware 
     private var vpnPrepareCallback: (suspend () -> Unit)? = null
 
     private var requestNotificationCallback: (() -> Unit)? = null
+
+    private var pendingAnnouncement: HashMap<String, Any>? = null
 
     private val packages = mutableListOf<Package>()
 
@@ -134,6 +144,11 @@ class AppPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, ActivityAware 
                 showAnnouncementNotification(call, result)
             }
 
+            "consumePendingAnnouncement" -> {
+                result.success(pendingAnnouncement)
+                pendingAnnouncement = null
+            }
+
             "moveTaskToBack" -> {
                 activityRef?.get()?.moveTaskToBack(true)
                 result.success(true)
@@ -179,11 +194,15 @@ class AppPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, ActivityAware 
     }
 
     private fun hasNotificationPermission(): Boolean {
-        return Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+        val runtimePermissionGranted = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
             ContextCompat.checkSelfPermission(
                 GlobalState.application,
                 Manifest.permission.POST_NOTIFICATIONS
             ) == PackageManager.PERMISSION_GRANTED
+        return runtimePermissionGranted &&
+            androidx.core.app.NotificationManagerCompat
+                .from(GlobalState.application)
+                .areNotificationsEnabled()
     }
 
     private fun showAnnouncementNotification(call: MethodCall, result: Result) {
@@ -220,7 +239,15 @@ class AppPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, ActivityAware 
         }
 
         val notificationId = call.argument<String>("id")?.hashCode() ?: title.hashCode()
-        val openAppIntent = Intent().setComponent(Components.MAIN_ACTIVITY)
+        val openAppIntent = Intent().setComponent(Components.MAIN_ACTIVITY).apply {
+            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            putExtra(EXTRA_ANNOUNCEMENT_ID, call.argument<String>("id") ?: title)
+            putExtra(EXTRA_ANNOUNCEMENT_TITLE, title)
+            putExtra(EXTRA_ANNOUNCEMENT_SUMMARY, summary)
+            putExtra(EXTRA_ANNOUNCEMENT_CONTENT, content)
+            putExtra(EXTRA_ANNOUNCEMENT_AUTO_CLOSE, autoCloseSeconds)
+            putExtra(EXTRA_NOTIFICATION_ID, notificationId)
+        }
         val contentIntent = PendingIntent.getActivity(
             context,
             notificationId,
@@ -471,6 +498,8 @@ class AppPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, ActivityAware 
         activityRef = WeakReference(binding.activity)
         binding.addActivityResultListener(::onActivityResult)
         binding.addRequestPermissionsResultListener(::onRequestPermissionsResultListener)
+        binding.addOnNewIntentListener(this)
+        captureAnnouncementIntent(binding.activity.intent, notifyFlutter = false)
     }
 
     override fun onDetachedFromActivityForConfigChanges() {
@@ -479,11 +508,45 @@ class AppPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, ActivityAware 
 
     override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
         activityRef = WeakReference(binding.activity)
+        binding.addOnNewIntentListener(this)
+        captureAnnouncementIntent(binding.activity.intent, notifyFlutter = false)
     }
 
     override fun onDetachedFromActivity() {
         channel.invokeMethod("exit", null)
         activityRef = null
+    }
+
+    override fun onNewIntent(intent: Intent): Boolean {
+        return captureAnnouncementIntent(intent, notifyFlutter = true)
+    }
+
+    private fun captureAnnouncementIntent(intent: Intent?, notifyFlutter: Boolean): Boolean {
+        intent ?: return false
+        val announcementId = intent.getStringExtra(EXTRA_ANNOUNCEMENT_ID) ?: return false
+        val payload = hashMapOf<String, Any>(
+            "id" to announcementId,
+            "title" to (intent.getStringExtra(EXTRA_ANNOUNCEMENT_TITLE) ?: "公告"),
+            "summary" to intent.getStringExtra(EXTRA_ANNOUNCEMENT_SUMMARY).orEmpty(),
+            "content" to intent.getStringExtra(EXTRA_ANNOUNCEMENT_CONTENT).orEmpty(),
+            "autoCloseSeconds" to intent.getIntExtra(EXTRA_ANNOUNCEMENT_AUTO_CLOSE, 0)
+        )
+        pendingAnnouncement = payload
+        val notificationId = intent.getIntExtra(EXTRA_NOTIFICATION_ID, Int.MIN_VALUE)
+        if (notificationId != Int.MIN_VALUE) {
+            getSystemService(GlobalState.application, NotificationManager::class.java)
+                ?.cancel(notificationId)
+        }
+        intent.removeExtra(EXTRA_ANNOUNCEMENT_ID)
+        intent.removeExtra(EXTRA_ANNOUNCEMENT_TITLE)
+        intent.removeExtra(EXTRA_ANNOUNCEMENT_SUMMARY)
+        intent.removeExtra(EXTRA_ANNOUNCEMENT_CONTENT)
+        intent.removeExtra(EXTRA_ANNOUNCEMENT_AUTO_CLOSE)
+        intent.removeExtra(EXTRA_NOTIFICATION_ID)
+        if (notifyFlutter) {
+            channel.invokeMethod("announcementTapped", payload)
+        }
+        return true
     }
 
     private fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?): Boolean {

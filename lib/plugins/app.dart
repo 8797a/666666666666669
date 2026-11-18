@@ -10,6 +10,8 @@ class App {
   static App? _instance;
   late MethodChannel methodChannel;
   Function()? onExit;
+  Future<void> Function(Map<String, dynamic>)? _onAnnouncementTapped;
+  Map<String, dynamic>? _pendingAnnouncementTap;
 
   App._internal() {
     methodChannel = const MethodChannel('$packageName/app');
@@ -19,6 +21,17 @@ class App {
           if (onExit != null) {
             await onExit!();
           }
+          return;
+        case 'announcementTapped':
+          final payload = _announcementMap(call.arguments);
+          if (payload == null) return;
+          final handler = _onAnnouncementTapped;
+          if (handler == null) {
+            _pendingAnnouncementTap = payload;
+          } else {
+            await _deliverAnnouncementTap(payload, handler);
+          }
+          return;
         default:
           throw MissingPluginException();
       }
@@ -28,6 +41,42 @@ class App {
   factory App() {
     _instance ??= App._internal();
     return _instance!;
+  }
+
+  set onAnnouncementTapped(
+    Future<void> Function(Map<String, dynamic>)? handler,
+  ) {
+    _onAnnouncementTapped = handler;
+    final pending = _pendingAnnouncementTap;
+    if (handler != null && pending != null) {
+      _pendingAnnouncementTap = null;
+      unawaited(_deliverAnnouncementTap(pending, handler));
+    }
+  }
+
+  Future<Map<String, dynamic>?> consumePendingAnnouncement() async {
+    final result = await methodChannel.invokeMethod<Object?>(
+      'consumePendingAnnouncement',
+    );
+    return _announcementMap(result);
+  }
+
+  Map<String, dynamic>? _announcementMap(Object? value) {
+    if (value is! Map) return null;
+    return value.map((key, item) => MapEntry(key.toString(), item));
+  }
+
+  Future<void> _deliverAnnouncementTap(
+    Map<String, dynamic> payload,
+    Future<void> Function(Map<String, dynamic>) handler,
+  ) async {
+    try {
+      await handler(payload);
+    } finally {
+      try {
+        await consumePendingAnnouncement();
+      } catch (_) {}
+    }
   }
 
   Future<bool?> moveTaskToBack() async {

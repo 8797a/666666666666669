@@ -11,6 +11,7 @@ import 'package:fl_clash/manager/manager.dart';
 import 'package:fl_clash/plugins/app.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
+import 'package:fl_clash/widgets/dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -48,18 +49,44 @@ class ApplicationState extends ConsumerState<Application> {
   @override
   void initState() {
     super.initState();
+    app?.onAnnouncementTapped = announcementService.showOpenedAnnouncement;
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) async {
       final currentContext = globalState.navigatorKey.currentContext;
       if (currentContext != null) {
         await appController.attach(currentContext, ref);
         if (system.isAndroid &&
             await app?.requestNotificationsPermission() != true) {
+          await globalState.showCommonDialog<void>(
+            dismissible: false,
+            child: CommonDialog(
+              title: '需要通知权限',
+              child: const Text(
+                'FlClash 需要通知权限来显示自动公告。请在系统权限请求中允许通知；若拒绝授权，程序将退出。',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(currentContext).pop(),
+                  child: const Text('退出程序'),
+                ),
+              ],
+            ),
+          );
           await system.exit();
           return;
         }
+        final openedAnnouncement = await app?.consumePendingAnnouncement();
+        if (openedAnnouncement != null) {
+          await announcementService.showOpenedAnnouncement(openedAnnouncement);
+        }
         final silentLaunch = ref.read(appSettingProvider).silentLaunch;
         if (!silentLaunch || system.isAndroid) {
-          await announcementService.showForTrigger('startup');
+          await announcementService.showForTrigger(
+            'startup',
+            excludedIds: {
+              if (openedAnnouncement?['id'] is String)
+                openedAnnouncement!['id'] as String,
+            },
+          );
           announcementService.startRepeating();
         }
       } else {

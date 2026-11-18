@@ -17,11 +17,15 @@ class AnnouncementService {
   bool _isCheckingRepeats = false;
   final Set<String> _showingAnnouncements = {};
 
-  Future<void> showForTrigger(String trigger) async {
+  Future<void> showForTrigger(
+    String trigger, {
+    Set<String> excludedIds = const {},
+  }) async {
     try {
       final announcements = await _fetchAnnouncements();
       for (final announcement in announcements) {
-        if (_triggerOf(announcement) == trigger) {
+        if (_triggerOf(announcement) == trigger &&
+            !excludedIds.contains(_idOf(announcement))) {
           await _showIfDue(announcement);
         }
       }
@@ -30,9 +34,26 @@ class AnnouncementService {
     }
   }
 
+  Future<void> showOpenedAnnouncement(Map<String, dynamic> announcement) async {
+    if (announcement['title'] is! String ||
+        announcement['content'] is! String) {
+      return;
+    }
+    final id = _idOf(announcement);
+    if (_showingAnnouncements.contains(id)) return;
+    _showingAnnouncements.add(id);
+    try {
+      await _present(announcement, id, asNotification: false);
+    } catch (error) {
+      commonPrint.log('show opened announcement failed: $error');
+    } finally {
+      _showingAnnouncements.remove(id);
+    }
+  }
+
   void startRepeating() {
     _repeatTimer ??= Timer.periodic(
-      const Duration(minutes: 1),
+      const Duration(minutes: 3),
       (_) => _checkRepeats(),
     );
   }
@@ -83,9 +104,14 @@ class AnnouncementService {
           await _showIfDue(
             announcement,
             onlyIfPreviouslyShown: !isScheduledStartup,
+            asNotification: true,
           );
         } else if (isScheduledStartup) {
-          await _showIfDue(announcement, onlyOnce: true);
+          await _showIfDue(
+            announcement,
+            onlyOnce: true,
+            asNotification: true,
+          );
         }
       }
     } catch (error) {
@@ -99,6 +125,7 @@ class AnnouncementService {
     Map<String, dynamic> announcement, {
     bool onlyIfPreviouslyShown = false,
     bool onlyOnce = false,
+    bool asNotification = false,
   }) async {
     final id = _idOf(announcement);
     if (_showingAnnouncements.contains(id)) return;
@@ -119,7 +146,7 @@ class AnnouncementService {
         _lastShownKey(id),
         DateTime.now().millisecondsSinceEpoch,
       );
-      await _present(announcement, id);
+      await _present(announcement, id, asNotification: asNotification);
     } catch (error) {
       commonPrint.log('present announcement failed: $error');
     } finally {
@@ -129,8 +156,9 @@ class AnnouncementService {
 
   Future<void> _present(
     Map<String, dynamic> announcement,
-    String id,
-  ) async {
+    String id, {
+    required bool asNotification,
+  }) async {
     final title = announcement['title'] as String;
     final summary = announcement['summary'] is String
         ? announcement['summary'] as String
@@ -138,7 +166,7 @@ class AnnouncementService {
     final content = announcement['content'] as String;
     final autoCloseSeconds = _autoCloseSecondsOf(announcement);
 
-    if (system.isAndroid) {
+    if (system.isAndroid && asNotification) {
       await app?.showAnnouncementNotification(
         id: id,
         title: title,
